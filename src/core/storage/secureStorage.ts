@@ -5,7 +5,7 @@ export class SecureStorage {
   static async setSecureItem(
     serviceKey: string,
     secret: string,
-    options?: Keychain.Options
+    options?: Keychain.SetOptions
   ): Promise<boolean> {
     try {
       const result = await Keychain.setGenericPassword('UniversalDocsUser', secret, {
@@ -20,7 +20,7 @@ export class SecureStorage {
 
   static async getSecureItem(
     serviceKey: string,
-    options?: Keychain.Options
+    options?: Keychain.GetOptions
   ): Promise<string | null> {
     try {
       const credentials = await Keychain.getGenericPassword({

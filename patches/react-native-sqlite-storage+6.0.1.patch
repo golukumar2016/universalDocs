@@ -1,0 +1,24 @@
+diff --git a/node_modules/react-native-sqlite-storage/platforms/android-native/build.gradle b/node_modules/react-native-sqlite-storage/platforms/android-native/build.gradle
+--- a/node_modules/react-native-sqlite-storage/platforms/android-native/build.gradle
++++ b/node_modules/react-native-sqlite-storage/platforms/android-native/build.gradle
+@@ -1,7 +1,7 @@
+ buildscript {
+     repositories {
+         google()
+-        jcenter()
++        mavenCentral()
+     }
+ 
+     dependencies {
+diff --git a/node_modules/react-native-sqlite-storage/platforms/android/build.gradle b/node_modules/react-native-sqlite-storage/platforms/android/build.gradle
+--- a/node_modules/react-native-sqlite-storage/platforms/android/build.gradle
++++ b/node_modules/react-native-sqlite-storage/platforms/android/build.gradle
+@@ -1,7 +1,7 @@
+ buildscript {
+     repositories {
+         google()
+-        jcenter()
++        mavenCentral()
+     }
+ 
+     dependencies {
