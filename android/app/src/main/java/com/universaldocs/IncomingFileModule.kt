@@ -16,6 +16,11 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule
+import android.os.Build
+import android.os.Environment
+import android.provider.DocumentsContract
+import android.provider.Settings
+import androidx.core.content.ContextCompat
 import java.io.File
 
 class IncomingFileModule(private val reactContext: ReactApplicationContext) :
@@ -131,6 +136,190 @@ class IncomingFileModule(private val reactContext: ReactApplicationContext) :
         } catch (e: Exception) {
             Log.e(TAG, "Error resolving URI: $uriString", e)
             promise.reject("RESOLVE_URI_ERROR", e.message, e)
+        }
+    }
+
+    /**
+     * Checks if the app has external storage / all files access.
+     */
+    @ReactMethod
+    fun hasAllFilesAccess(promise: Promise) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                promise.resolve(Environment.isExternalStorageManager())
+            } else {
+                val readPerm = ContextCompat.checkSelfPermission(
+                    reactApplicationContext,
+                    android.Manifest.permission.READ_EXTERNAL_STORAGE
+                )
+                promise.resolve(readPerm == android.content.pm.PackageManager.PERMISSION_GRANTED)
+            }
+        } catch (e: Exception) {
+            promise.resolve(false)
+        }
+    }
+
+    /**
+     * Prompts the user to grant storage access (All Files Access on Android 11+ or App settings).
+     */
+    @ReactMethod
+    fun requestAllFilesAccess(promise: Promise) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                    data = Uri.parse("package:${reactApplicationContext.packageName}")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                reactApplicationContext.startActivity(intent)
+                promise.resolve(true)
+            } else {
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:${reactApplicationContext.packageName}")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                reactApplicationContext.startActivity(intent)
+                promise.resolve(true)
+            }
+        } catch (e: Exception) {
+            promise.reject("REQUEST_PERMISSION_ERROR", e.message, e)
+        }
+    }
+
+    /**
+     * Lists real files and folders inside a given filesystem directory path.
+     */
+    @ReactMethod
+    fun listFiles(directoryPath: String, promise: Promise) {
+        try {
+            val dir = File(directoryPath)
+            if (!dir.exists()) {
+                promise.reject("DIR_NOT_FOUND", "Directory does not exist: $directoryPath")
+                return
+            }
+            if (!dir.isDirectory) {
+                promise.reject("NOT_A_DIR", "Path is not a directory: $directoryPath")
+                return
+            }
+
+            val files = dir.listFiles()
+            val array = Arguments.createArray()
+            if (files != null) {
+                for (file in files) {
+                    val map = Arguments.createMap().apply {
+                        putString("name", file.name)
+                        putString("path", file.absolutePath)
+                        putString("uri", Uri.fromFile(file).toString())
+                        putDouble("size", if (file.isFile) file.length().toDouble() else 0.0)
+                        putDouble("modifiedAt", file.lastModified().toDouble())
+                        putBoolean("isDirectory", file.isDirectory)
+                        putBoolean("isFile", file.isFile)
+                        val ext = file.extension.lowercase()
+                        putString("extension", ext)
+                        if (file.isDirectory) {
+                            putString("mimeType", "resource/folder")
+                            val childCount = file.list()?.size ?: 0
+                            putInt("itemCount", childCount)
+                        } else {
+                            val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
+                                ?: "application/octet-stream"
+                            putString("mimeType", mime)
+                        }
+                    }
+                    array.pushMap(map)
+                }
+            }
+            promise.resolve(array)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error listing files in $directoryPath", e)
+            promise.reject("LIST_FILES_ERROR", e.message, e)
+        }
+    }
+
+    /**
+     * Lists children of a Storage Access Framework (SAF) document tree URI (content://).
+     */
+    @ReactMethod
+    fun listDocumentTree(treeUriString: String, documentId: String?, promise: Promise) {
+        try {
+            val treeUri = Uri.parse(treeUriString)
+            val docId = if (documentId.isNullOrBlank()) {
+                DocumentsContract.getTreeDocumentId(treeUri)
+            } else {
+                documentId
+            }
+            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, docId)
+            val cr = reactApplicationContext.contentResolver
+            val projection = arrayOf(
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                DocumentsContract.Document.COLUMN_MIME_TYPE,
+                DocumentsContract.Document.COLUMN_SIZE,
+                DocumentsContract.Document.COLUMN_LAST_MODIFIED
+            )
+            val cursor = cr.query(childrenUri, projection, null, null, null)
+            val array = Arguments.createArray()
+            if (cursor != null) {
+                val idIdx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+                val nameIdx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+                val mimeIdx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_MIME_TYPE)
+                val sizeIdx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_SIZE)
+                val modIdx = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+
+                while (cursor.moveToNext()) {
+                    val childId = cursor.getString(idIdx)
+                    val name = cursor.getString(nameIdx) ?: "Untitled"
+                    val mimeType = cursor.getString(mimeIdx) ?: "application/octet-stream"
+                    val isDir = DocumentsContract.Document.MIME_TYPE_DIR.equals(mimeType, ignoreCase = true)
+                    val size = if (sizeIdx != -1 && !cursor.isNull(sizeIdx)) cursor.getLong(sizeIdx) else 0L
+                    val modifiedAt = if (modIdx != -1 && !cursor.isNull(modIdx)) cursor.getLong(modIdx) else 0L
+
+                    val itemUri = if (isDir) {
+                        DocumentsContract.buildTreeDocumentUri(treeUri.authority, childId).toString()
+                    } else {
+                        DocumentsContract.buildDocumentUriUsingTree(treeUri, childId).toString()
+                    }
+
+                    val ext = name.substringAfterLast('.', "").lowercase()
+
+                    val map = Arguments.createMap().apply {
+                        putString("id", childId)
+                        putString("name", name)
+                        putString("path", itemUri)
+                        putString("uri", itemUri)
+                        putString("extension", if (isDir) "" else ext)
+                        putString("mimeType", mimeType)
+                        putDouble("size", size.toDouble())
+                        putDouble("modifiedAt", modifiedAt.toDouble())
+                        putBoolean("isDirectory", isDir)
+                        putBoolean("isFile", !isDir)
+                    }
+                    array.pushMap(map)
+                }
+                cursor.close()
+            }
+            promise.resolve(array)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error listing document tree $treeUriString", e)
+            promise.reject("DOCUMENT_TREE_ERROR", e.message, e)
+        }
+    }
+
+    /**
+     * Returns standard Android public directory paths.
+     */
+    @ReactMethod
+    fun getDefaultDirectories(promise: Promise) {
+        try {
+            val map = Arguments.createMap().apply {
+                putString("download", Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)?.absolutePath ?: "/storage/emulated/0/Download")
+                putString("documents", Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)?.absolutePath ?: "/storage/emulated/0/Documents")
+                putString("externalStorage", Environment.getExternalStorageDirectory()?.absolutePath ?: "/storage/emulated/0")
+                putString("appInternal", reactApplicationContext.filesDir.absolutePath)
+                putString("appExternal", reactApplicationContext.getExternalFilesDir(null)?.absolutePath ?: reactApplicationContext.filesDir.absolutePath)
+            }
+            promise.resolve(map)
+        } catch (e: Exception) {
+            promise.reject("GET_DEFAULT_DIRS_ERROR", e.message, e)
         }
     }
 

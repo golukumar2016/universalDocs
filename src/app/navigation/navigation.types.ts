@@ -10,6 +10,8 @@ export type MainTabParamList = {
 
 export type RootStackParamList = {
   InitialDocument: undefined;
+  FileBrowser: undefined;
+  Folder?: { folderPath: string; folderName: string };
   DocumentViewer: { document: Document };
   UnsupportedDocument: { document?: Document; reason?: string };
   Editor: { documentId?: string; filePath?: string; title?: string; document?: Document };

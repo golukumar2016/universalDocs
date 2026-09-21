@@ -4,11 +4,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { pick, types } from '@react-native-documents/picker';
 import { incomingFileService } from '../../core/intents/incomingFileService';
@@ -201,6 +201,14 @@ export const InitialDocumentScreen: React.FC = () => {
               )}
             </TouchableOpacity>
 
+            <TouchableOpacity
+              style={styles.browseFilesButton}
+              onPress={() => navigation.navigate('FileBrowser')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.browseFilesButtonText}>📁 Browse Files & Folders</Text>
+            </TouchableOpacity>
+
             <View style={styles.formatsFooter}>
               <Text style={styles.formatsLabel}>Supported Formats:</Text>
               <Text style={styles.formatsList}>
@@ -352,10 +360,26 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     width: '100%',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   openDocumentButtonText: {
     color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  browseFilesButton: {
+    backgroundColor: '#1E293B',
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#38BDF8',
+    marginBottom: 20,
+  },
+  browseFilesButtonText: {
+    color: '#38BDF8',
     fontSize: 16,
     fontWeight: '700',
   },

@@ -5,6 +5,8 @@ import {
   InitialDocumentScreen,
   DocumentViewerScreen,
   UnsupportedDocumentScreen,
+  FileBrowserScreen,
+  FolderScreen,
 } from '../../features/documents';
 import { EditorScreen } from '../../features/editor';
 import { MainNavigator } from './MainNavigator';
@@ -22,6 +24,16 @@ export const RootNavigator: React.FC = () => {
       <Stack.Screen
         name="InitialDocument"
         component={InitialDocumentScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="FileBrowser"
+        component={FileBrowserScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Folder"
+        component={FolderScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen
