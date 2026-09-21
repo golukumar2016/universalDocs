@@ -29,14 +29,26 @@ class IncomingFileModule(private val reactContext: ReactApplicationContext) :
         @Volatile
         var instance: IncomingFileModule? = null
 
+        @Volatile
+        var cachedInitialIntent: Intent? = null
+
+        fun setInitialIntent(intent: Intent?) {
+            if (intent != null) {
+                cachedInitialIntent = intent
+            }
+        }
+
         fun handleIncomingIntent(intent: Intent?) {
             if (intent != null) {
+                cachedInitialIntent = intent
                 instance?.processIncomingIntent(intent, isNewIntent = true)
             }
         }
     }
 
     private var initialIntentConsumed = false
+    private var lastProcessedUri: String? = null
+    private var lastProcessedTime: Long = 0L
 
     init {
         instance = this
@@ -53,7 +65,7 @@ class IncomingFileModule(private val reactContext: ReactApplicationContext) :
         }
     }
 
-    override fun onActivityResult(activity: Activity?, requestCode: Int, resultCode: Int, data: Intent?) {
+    override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
         // Not used
     }
 
@@ -74,7 +86,7 @@ class IncomingFileModule(private val reactContext: ReactApplicationContext) :
             }
 
             val currentActivity = reactApplicationContext.currentActivity
-            val intent = currentActivity?.intent
+            val intent = cachedInitialIntent ?: currentActivity?.intent
             if (intent == null) {
                 promise.resolve(null)
                 return
@@ -99,6 +111,7 @@ class IncomingFileModule(private val reactContext: ReactApplicationContext) :
     @ReactMethod
     fun clearInitialFile(promise: Promise) {
         initialIntentConsumed = true
+        cachedInitialIntent = null
         promise.resolve(true)
     }
 
@@ -137,7 +150,14 @@ class IncomingFileModule(private val reactContext: ReactApplicationContext) :
     fun processIncomingIntent(intent: Intent, isNewIntent: Boolean = false) {
         try {
             val metadata = extractFileMetadata(intent) ?: return
+            val uriStr = metadata.getString("uri")
+            val now = System.currentTimeMillis()
             if (isNewIntent) {
+                if (uriStr != null && uriStr == lastProcessedUri && (now - lastProcessedTime) < 1000) {
+                    return
+                }
+                lastProcessedUri = uriStr
+                lastProcessedTime = now
                 sendEvent(EVENT_INCOMING_FILE, metadata)
             }
         } catch (e: Exception) {

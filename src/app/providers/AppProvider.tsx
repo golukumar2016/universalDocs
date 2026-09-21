@@ -5,6 +5,8 @@ import { DirectoryManager } from '../../core/filesystem/directoryManager';
 import { AppDatabase } from '../../core/database/database';
 import { ErrorHandler } from '../../core/errors/errorHandler';
 
+import { navigationRef } from '../navigation/navigationRef';
+
 interface AppProviderProps {
   children: React.ReactNode;
 }
@@ -25,7 +27,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer>{children}</NavigationContainer>
+      <NavigationContainer ref={navigationRef}>{children}</NavigationContainer>
     </SafeAreaProvider>
   );
 };

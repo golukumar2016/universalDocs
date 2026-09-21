@@ -1,3 +1,14 @@
+export interface Document {
+  id: string;
+  name: string;
+  uri: string;
+  mimeType: string;
+  extension: string;
+  size?: number;
+  createdAt?: number;
+  modifiedAt?: number;
+}
+
 export interface DocumentItem {
   id: string;
   name: string;
