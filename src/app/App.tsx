@@ -28,6 +28,7 @@ export const App: React.FC = () => {
       if (!doc.isSupported) {
         navigate('UnsupportedDocument', {
           document: doc.document,
+          
           reason: `UniversalDocs does not support the .${doc.document.extension} format yet.`,
         });
       } else {
