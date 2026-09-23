@@ -49,10 +49,7 @@ export const RootNavigator: React.FC = () => {
       <Stack.Screen
         name="Editor"
         component={EditorScreen}
-        options={{
-          headerShown: true,
-          title: 'Editor',
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen name="MainTabs" component={MainNavigator} />
     </Stack.Navigator>

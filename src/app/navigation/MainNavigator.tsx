@@ -5,17 +5,36 @@ import { DocumentsScreen } from '../../features/documents';
 import { SearchScreen } from '../../features/search';
 import { ScannerScreen } from '../../features/scanner';
 import { SecurityScreen } from '../../features/security';
-import { colors } from '../../shared/theme';
+import { useAppTheme } from '../../shared/hooks';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export const MainNavigator: React.FC = () => {
+  const { themeColors } = useAppTheme();
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: true,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textSecondary,
+        headerStyle: {
+          backgroundColor: themeColors.surface,
+          borderBottomColor: themeColors.border,
+          borderBottomWidth: 1,
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        headerTitleStyle: {
+          color: themeColors.textPrimary,
+          fontWeight: '700',
+          fontSize: 17,
+        },
+        tabBarStyle: {
+          backgroundColor: themeColors.surface,
+          borderTopColor: themeColors.border,
+          borderTopWidth: 1,
+        },
+        tabBarActiveTintColor: themeColors.primary,
+        tabBarInactiveTintColor: themeColors.textSecondary,
       }}
     >
       <Tab.Screen

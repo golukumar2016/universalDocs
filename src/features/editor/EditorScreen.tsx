@@ -18,13 +18,14 @@ import { DocumentRepository } from '../../core/database/repositories/documentRep
 import { DocumentService } from '../../core/filesystem/documentService';
 import { DocumentItem } from '../../shared/types';
 import { formatFileSize } from '../../shared/utils';
-import { colors } from '../../shared/theme';
+import { useAppTheme } from '../../shared/hooks';
 
 type EditorScreenRouteProp = RouteProp<RootStackParamList, 'Editor'>;
 
 export const EditorScreen: React.FC = () => {
   const route = useRoute<EditorScreenRouteProp>();
   const navigation = useNavigation();
+  const { themeColors, isDark } = useAppTheme();
 
   const { documentId } = route.params || {};
 
@@ -60,13 +61,15 @@ export const EditorScreen: React.FC = () => {
           setDocument(doc);
         }
 
+        // Read text content using DocumentService
         const text = await DocumentService.loadContent(doc.path, doc.extension);
         if (isMounted) {
           setContent(text);
           setInitialContent(text);
         }
       } catch (error: any) {
-        Alert.alert('Load Failed', error?.message || 'Unable to read file.');
+        console.error('Error loading document content:', error);
+        Alert.alert('Load Error', error?.message || 'Could not load file content.');
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -81,22 +84,19 @@ export const EditorScreen: React.FC = () => {
     };
   }, [documentId, navigation]);
 
-  // Save changes locally
+  // Save handler
   const handleSave = useCallback(async () => {
     if (!document) return;
 
     try {
       setIsSaving(true);
-      const updatedDoc = await DocumentService.saveContent(document, content);
-      setDocument(updatedDoc);
+      const updated = await DocumentService.saveContent(document, content);
+      setDocument(updated);
       setInitialContent(content);
       setStatusMessage('Saved locally');
-
-      setTimeout(() => {
-        setStatusMessage('');
-      }, 2500);
+      setTimeout(() => setStatusMessage(''), 2500);
     } catch (error: any) {
-      Alert.alert('Save Error', error?.message || 'Could not save changes.');
+      Alert.alert('Save Error', error?.message || 'Failed to save changes.');
     } finally {
       setIsSaving(false);
     }
@@ -131,30 +131,48 @@ export const EditorScreen: React.FC = () => {
 
   if (isLoading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading document...</Text>
+      <View style={[styles.centerContainer, { backgroundColor: themeColors.background }]}>
+        <ActivityIndicator size="large" color={themeColors.primary} />
+        <Text style={[styles.loadingText, { color: themeColors.textSecondary }]}>
+          Loading document...
+        </Text>
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* Custom Header */}
-        <View style={styles.header}>
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: themeColors.surface,
+              borderBottomColor: themeColors.border,
+            },
+          ]}
+        >
           <TouchableOpacity onPress={handleBack} style={styles.headerBtn}>
-            <Text style={styles.headerBtnText}>← Close</Text>
+            <Text style={[styles.headerBtnText, { color: themeColors.primary }]}>← Close</Text>
           </TouchableOpacity>
 
           <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle} numberOfLines={1}>
+            <Text
+              style={[styles.headerTitle, { color: themeColors.textPrimary }]}
+              numberOfLines={1}
+            >
               {document?.name || 'Document'}
             </Text>
-            <Text style={styles.headerSub}>
+            <Text
+              style={[
+                styles.headerSub,
+                { color: hasUnsavedChanges ? themeColors.warning : themeColors.textMuted },
+              ]}
+            >
               {hasUnsavedChanges ? '● Unsaved' : statusMessage || 'Offline - Ready'}
             </Text>
           </View>
@@ -164,30 +182,53 @@ export const EditorScreen: React.FC = () => {
             disabled={!hasUnsavedChanges || isSaving}
             style={[
               styles.saveBtn,
-              hasUnsavedChanges ? styles.saveBtnActive : styles.saveBtnDisabled,
+              hasUnsavedChanges
+                ? { backgroundColor: themeColors.primary }
+                : { backgroundColor: themeColors.cardSecondary, borderWidth: 1, borderColor: themeColors.border },
             ]}
           >
             {isSaving ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.saveBtnText}>Save</Text>
+              <Text
+                style={[
+                  styles.saveBtnText,
+                  { color: hasUnsavedChanges ? '#FFFFFF' : themeColors.textMuted },
+                ]}
+              >
+                Save
+              </Text>
             )}
           </TouchableOpacity>
         </View>
 
         {/* Info Toolbar */}
-        <View style={styles.toolbar}>
-          <Text style={styles.toolbarInfo}>
+        <View
+          style={[
+            styles.toolbar,
+            {
+              backgroundColor: themeColors.cardSecondary,
+              borderBottomColor: themeColors.border,
+            },
+          ]}
+        >
+          <Text style={[styles.toolbarInfo, { color: themeColors.textSecondary }]}>
             {lineCount} {lineCount === 1 ? 'line' : 'lines'}
           </Text>
-          <Text style={styles.toolbarDivider}>|</Text>
-          <Text style={styles.toolbarInfo}>{wordCount} words</Text>
-          <Text style={styles.toolbarDivider}>|</Text>
-          <Text style={styles.toolbarInfo}>{charCount} chars</Text>
+          <Text style={[styles.toolbarDivider, { color: themeColors.border }]}>|</Text>
+          <Text style={[styles.toolbarInfo, { color: themeColors.textSecondary }]}>
+            {wordCount} words
+          </Text>
+          <Text style={[styles.toolbarDivider, { color: themeColors.border }]}>|</Text>
+          <Text style={[styles.toolbarInfo, { color: themeColors.textSecondary }]}>
+            {charCount} chars
+          </Text>
           {document && (
             <>
-              <Text style={styles.toolbarDivider}>|</Text>
-              <Text style={styles.toolbarInfo}>{formatFileSize(document.size)}</Text>
+              <Text style={[styles.toolbarDivider, { color: themeColors.border }]}>|</Text>
+              <Text style={[styles.toolbarInfo, { color: themeColors.textSecondary }]}>
+                {formatFileSize(document.size)}
+              </Text>
             </>
           )}
         </View>
@@ -195,12 +236,12 @@ export const EditorScreen: React.FC = () => {
         {/* Document Editor Area */}
         <ScrollView style={styles.editorScroll} keyboardShouldPersistTaps="handled">
           <TextInput
-            style={styles.editorInput}
+            style={[styles.editorInput, { color: themeColors.textPrimary }]}
             multiline
             value={content}
             onChangeText={setContent}
             placeholder="Type your document content here..."
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={themeColors.textMuted}
             autoCapitalize="none"
             autoCorrect={false}
             textAlignVertical="top"
@@ -214,7 +255,6 @@ export const EditorScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   keyboardContainer: {
     flex: 1,
@@ -223,22 +263,17 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
   },
   loadingText: {
     marginTop: 12,
     fontSize: 15,
-    color: colors.textSecondary,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: '#FFFFFF',
   },
   headerBtn: {
     paddingVertical: 6,
@@ -247,7 +282,6 @@ const styles = StyleSheet.create({
   },
   headerBtnText: {
     fontSize: 16,
-    color: colors.primary,
     fontWeight: '600',
   },
   headerTitleContainer: {
@@ -258,11 +292,9 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.textPrimary,
   },
   headerSub: {
     fontSize: 12,
-    color: colors.textMuted,
     marginTop: 2,
   },
   saveBtn: {
@@ -270,14 +302,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 6,
   },
-  saveBtnActive: {
-    backgroundColor: colors.primary,
-  },
-  saveBtnDisabled: {
-    backgroundColor: '#E2E8F0',
-  },
   saveBtnText: {
-    color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -286,17 +311,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#F8FAFC',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   toolbarInfo: {
     fontSize: 12,
-    color: colors.textSecondary,
   },
   toolbarDivider: {
     marginHorizontal: 8,
-    color: colors.border,
     fontSize: 12,
   },
   editorScroll: {
@@ -307,7 +328,6 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 15,
     lineHeight: 22,
-    color: colors.textPrimary,
     fontFamily: Platform.select({
       ios: 'Menlo',
       android: 'monospace',

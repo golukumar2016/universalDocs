@@ -5,7 +5,7 @@ import {
   StyleSheet,
   TouchableOpacityProps,
 } from 'react-native';
-import { colors } from '../theme';
+import { useAppTheme } from '../hooks';
 
 export interface ButtonProps extends TouchableOpacityProps {
   title: string;
@@ -18,17 +18,23 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   ...props
 }) => {
+  const { themeColors } = useAppTheme();
+
   const buttonStyle = [
     styles.button,
-    variant === 'primary' && styles.primaryBtn,
-    variant === 'secondary' && styles.secondaryBtn,
-    variant === 'outline' && styles.outlineBtn,
+    variant === 'primary' && { backgroundColor: themeColors.primary },
+    variant === 'secondary' && { backgroundColor: themeColors.secondary },
+    variant === 'outline' && {
+      borderWidth: 1,
+      borderColor: themeColors.primary,
+      backgroundColor: 'transparent',
+    },
     style,
   ];
 
   const textStyle = [
     styles.buttonText,
-    variant === 'outline' && styles.outlineText,
+    variant === 'outline' && { color: themeColors.primary },
   ];
 
   return (
@@ -46,24 +52,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  primaryBtn: {
-    backgroundColor: colors.primary,
-  },
-  secondaryBtn: {
-    backgroundColor: colors.secondary,
-  },
-  outlineBtn: {
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: 'transparent',
-  },
   buttonText: {
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 15,
-  },
-  outlineText: {
-    color: colors.primary,
   },
 });
 

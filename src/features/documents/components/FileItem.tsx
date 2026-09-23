@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { BrowserItem } from '../services/fileBrowserService';
 import { formatFileSize, formatDate } from '../../../shared/utils';
+import { useAppTheme } from '../../../shared/hooks';
 
 interface FileItemProps {
   item: BrowserItem;
@@ -9,6 +10,8 @@ interface FileItemProps {
 }
 
 export const FileItem: React.FC<FileItemProps> = ({ item, onPress }) => {
+  const { themeColors } = useAppTheme();
+
   const getFileIcon = (docType?: string) => {
     switch ((docType || '').toUpperCase()) {
       case 'PDF':
@@ -21,8 +24,9 @@ export const FileItem: React.FC<FileItemProps> = ({ item, onPress }) => {
         return '📘';
       case 'XLS':
       case 'XLSX':
-      case 'CSV':
         return '📊';
+      case 'CSV':
+        return '📈';
       case 'PPT':
       case 'PPTX':
         return '📙';
@@ -32,33 +36,61 @@ export const FileItem: React.FC<FileItemProps> = ({ item, onPress }) => {
   };
 
   const formattedSize = item.size > 0 ? formatFileSize(item.size) : '0 B';
-  const displayType = item.documentType !== 'UNSUPPORTED'
-    ? item.documentType
-    : (item.extension ? item.extension.toUpperCase() : 'FILE');
+  const displayType =
+    item.documentType !== 'UNSUPPORTED'
+      ? item.documentType
+      : item.extension
+      ? item.extension.toUpperCase()
+      : 'FILE';
 
   return (
     <TouchableOpacity
-      style={styles.container}
+      style={[
+        styles.container,
+        {
+          backgroundColor: themeColors.card,
+          borderColor: themeColors.border,
+        },
+      ]}
       onPress={() => onPress(item)}
       activeOpacity={0.7}
     >
-      <View style={styles.iconWrapper}>
+      <View
+        style={[
+          styles.iconWrapper,
+          {
+            backgroundColor: themeColors.cardSecondary,
+            borderColor: themeColors.borderLight,
+          },
+        ]}
+      >
         <Text style={styles.fileIcon}>{getFileIcon(item.documentType)}</Text>
       </View>
 
       <View style={styles.infoContainer}>
-        <Text style={styles.name} numberOfLines={1} ellipsizeMode="middle">
+        <Text
+          style={[styles.name, { color: themeColors.textPrimary }]}
+          numberOfLines={1}
+          ellipsizeMode="middle"
+        >
           {item.name}
         </Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
           {displayType} • {formattedSize}
           {item.modifiedAt ? ` • ${formatDate(item.modifiedAt)}` : ''}
         </Text>
       </View>
 
       {!item.isSupported && (
-        <View style={styles.unsupportedBadge}>
-          <Text style={styles.unsupportedText}>Unknown</Text>
+        <View
+          style={[
+            styles.unsupportedBadge,
+            { backgroundColor: themeColors.cardSecondary },
+          ]}
+        >
+          <Text style={[styles.unsupportedText, { color: themeColors.warning }]}>
+            Unknown
+          </Text>
         </View>
       )}
     </TouchableOpacity>
@@ -71,22 +103,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#1E293B',
     borderRadius: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#334155',
   },
   iconWrapper: {
     width: 42,
     height: 42,
     borderRadius: 10,
-    backgroundColor: '#0F172A',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
     borderWidth: 1,
-    borderColor: '#334155',
   },
   fileIcon: {
     fontSize: 22,
@@ -97,15 +125,12 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#F8FAFC',
     marginBottom: 2,
   },
   subtitle: {
     fontSize: 12,
-    color: '#94A3B8',
   },
   unsupportedBadge: {
-    backgroundColor: '#334155',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
@@ -113,7 +138,6 @@ const styles = StyleSheet.create({
   },
   unsupportedText: {
     fontSize: 11,
-    color: '#F59E0B',
     fontWeight: '600',
   },
 });

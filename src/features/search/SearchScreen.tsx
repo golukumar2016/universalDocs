@@ -13,10 +13,11 @@ import { RootStackParamList } from '../../app/navigation/navigation.types';
 import { DocumentRepository } from '../../core/database/repositories/documentRepository';
 import { DocumentItem } from '../../shared/types';
 import { formatFileSize, formatDate } from '../../shared/utils';
-import { colors } from '../../shared/theme';
+import { useAppTheme } from '../../shared/hooks';
 
 export const SearchScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const { themeColors, isDark } = useAppTheme();
 
   const [query, setQuery] = useState<string>('');
   const [results, setResults] = useState<DocumentItem[]>([]);
@@ -64,7 +65,13 @@ export const SearchScreen: React.FC = () => {
 
     return (
       <TouchableOpacity
-        style={styles.card}
+        style={[
+          styles.card,
+          {
+            backgroundColor: themeColors.card,
+            borderColor: themeColors.border,
+          },
+        ]}
         onPress={() => handleOpenDoc(item)}
         activeOpacity={0.7}
       >
@@ -73,10 +80,10 @@ export const SearchScreen: React.FC = () => {
         </View>
 
         <View style={styles.info}>
-          <Text style={styles.name} numberOfLines={1}>
+          <Text style={[styles.name, { color: themeColors.textPrimary }]} numberOfLines={1}>
             {item.name}
           </Text>
-          <Text style={styles.meta}>
+          <Text style={[styles.meta, { color: themeColors.textMuted }]}>
             {formatFileSize(item.size)} • {formatDate(item.updatedAt)}
           </Text>
         </View>
@@ -87,23 +94,33 @@ export const SearchScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       <View style={styles.container}>
-        <Text style={styles.headerTitle}>Search Documents</Text>
+        <Text style={[styles.headerTitle, { color: themeColors.textPrimary }]}>
+          Search Documents
+        </Text>
 
-        <View style={styles.searchBar}>
+        <View
+          style={[
+            styles.searchBar,
+            {
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: themeColors.textPrimary }]}
             placeholder="Search documents by name..."
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={themeColors.textMuted}
             value={query}
             onChangeText={setQuery}
             clearButtonMode="while-editing"
           />
           {query.length > 0 && (
             <TouchableOpacity onPress={() => setQuery('')}>
-              <Text style={styles.clearBtn}>✕</Text>
+              <Text style={[styles.clearBtn, { color: themeColors.textMuted }]}>✕</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -115,25 +132,31 @@ export const SearchScreen: React.FC = () => {
             { key: 'favorites', label: '★ Starred' },
             { key: 'text', label: 'Text/MD' },
             { key: 'pdf', label: 'PDF' },
-          ].map((pill) => (
-            <TouchableOpacity
-              key={pill.key}
-              style={[
-                styles.filterPill,
-                filterType === pill.key && styles.filterPillActive,
-              ]}
-              onPress={() => setFilterType(pill.key as any)}
-            >
-              <Text
+          ].map((pill) => {
+            const isActive = filterType === pill.key;
+            return (
+              <TouchableOpacity
+                key={pill.key}
                 style={[
-                  styles.filterPillText,
-                  filterType === pill.key && styles.filterPillTextActive,
+                  styles.filterPill,
+                  {
+                    backgroundColor: isActive ? themeColors.primary : themeColors.cardSecondary,
+                    borderColor: isActive ? themeColors.primary : themeColors.border,
+                  },
                 ]}
+                onPress={() => setFilterType(pill.key as any)}
               >
-                {pill.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    styles.filterPillText,
+                    { color: isActive ? '#FFFFFF' : themeColors.textSecondary },
+                  ]}
+                >
+                  {pill.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <FlatList
@@ -143,8 +166,10 @@ export const SearchScreen: React.FC = () => {
           contentContainerStyle={results.length === 0 ? styles.emptyContainer : undefined}
           ListEmptyComponent={
             <View style={styles.emptyView}>
-              <Text style={styles.emptyTitle}>No matching documents</Text>
-              <Text style={styles.emptyText}>
+              <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>
+                No matching documents
+              </Text>
+              <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
                 {query ? `No files found matching "${query}"` : 'Your saved documents will show here'}
               </Text>
             </View>
@@ -158,7 +183,6 @@ export const SearchScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   container: {
     flex: 1,
@@ -167,18 +191,15 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: colors.textPrimary,
     marginBottom: 14,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     marginBottom: 12,
+    borderWidth: 1,
   },
   searchIcon: {
     fontSize: 16,
@@ -188,11 +209,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     fontSize: 15,
-    color: colors.textPrimary,
   },
   clearBtn: {
     fontSize: 14,
-    color: colors.textMuted,
     padding: 6,
   },
   filterRow: {
@@ -204,28 +223,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#E2E8F0',
-  },
-  filterPillActive: {
-    backgroundColor: colors.primary,
+    borderWidth: 1,
   },
   filterPillText: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  filterPillTextActive: {
-    color: '#FFFFFF',
   },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   badge: {
     width: 44,
@@ -246,11 +256,9 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.textPrimary,
   },
   meta: {
     fontSize: 12,
-    color: colors.textMuted,
     marginTop: 4,
   },
   star: {
@@ -270,12 +278,10 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.textPrimary,
     marginBottom: 4,
   },
   emptyText: {
     fontSize: 13,
-    color: colors.textSecondary,
     textAlign: 'center',
   },
 });

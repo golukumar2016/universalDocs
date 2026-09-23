@@ -11,13 +11,14 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../app/navigation/navigation.types';
 import { incomingFileService } from '../../core/intents/incomingFileService';
 import { formatFileSize } from '../../shared/utils';
-import { colors } from '../../shared/theme';
+import { useAppTheme } from '../../shared/hooks';
 
 type DocumentViewerRouteProp = RouteProp<RootStackParamList, 'DocumentViewer'>;
 
 export const DocumentViewerScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<DocumentViewerRouteProp>();
+  const { themeColors, isDark } = useAppTheme();
 
   const { document } = route.params || {};
 
@@ -55,83 +56,162 @@ export const DocumentViewerScreen: React.FC = () => {
   const extensionUpper = (document?.extension || 'DOC').toUpperCase();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>UniversalDocs</Text>
-          <Text style={styles.headerBadge}>{extensionUpper} Document Screen</Text>
+          <Text style={[styles.headerTitle, { color: themeColors.textPrimary }]}>
+            UniversalDocs
+          </Text>
+          <Text
+            style={[
+              styles.headerBadge,
+              {
+                color: themeColors.primary,
+                backgroundColor: themeColors.badgeBg,
+                borderColor: themeColors.border,
+              },
+            ]}
+          >
+            {extensionUpper} Document Screen
+          </Text>
         </View>
 
         {/* Main Document Card */}
-        <View style={styles.card}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
           <View style={styles.iconContainer}>
             <Text style={styles.docIcon}>{getFormatIcon(document?.extension)}</Text>
           </View>
 
-          <Text style={styles.docName} numberOfLines={2}>
+          <Text
+            style={[styles.docName, { color: themeColors.textPrimary }]}
+            numberOfLines={2}
+          >
             {document?.name || 'Document'}
           </Text>
 
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusBadgeText}>✅ File Received & Identified</Text>
+          <View
+            style={[
+              styles.statusBadge,
+              {
+                backgroundColor: isDark ? '#064E3B' : '#DCFCE7',
+                borderColor: isDark ? '#059669' : '#86EFAC',
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusBadgeText,
+                { color: isDark ? '#34D399' : '#15803D' },
+              ]}
+            >
+              ✅ File Received & Identified
+            </Text>
           </View>
 
           {/* Details Table */}
-          <View style={styles.detailsBox}>
+          <View
+            style={[
+              styles.detailsBox,
+              {
+                backgroundColor: themeColors.cardSecondary,
+                borderColor: themeColors.borderLight,
+              },
+            ]}
+          >
             <View style={styles.detailRow}>
-              <Text style={styles.label}>Format / Type:</Text>
-              <Text style={styles.valueHighlight}>{extensionUpper}</Text>
+              <Text style={[styles.label, { color: themeColors.textSecondary }]}>
+                Format / Type:
+              </Text>
+              <Text style={[styles.valueHighlight, { color: themeColors.primary }]}>
+                {extensionUpper}
+              </Text>
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: themeColors.divider }]} />
 
             <View style={styles.detailRow}>
-              <Text style={styles.label}>MIME Type:</Text>
-              <Text style={styles.value} numberOfLines={1}>
+              <Text style={[styles.label, { color: themeColors.textSecondary }]}>
+                MIME Type:
+              </Text>
+              <Text
+                style={[styles.value, { color: themeColors.textPrimary }]}
+                numberOfLines={1}
+              >
                 {document?.mimeType || 'unknown'}
               </Text>
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: themeColors.divider }]} />
 
             <View style={styles.detailRow}>
-              <Text style={styles.label}>File Size:</Text>
-              <Text style={styles.value}>
+              <Text style={[styles.label, { color: themeColors.textSecondary }]}>
+                File Size:
+              </Text>
+              <Text style={[styles.value, { color: themeColors.textPrimary }]}>
                 {document?.size ? formatFileSize(document.size) : 'Unknown / Stream'}
               </Text>
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: themeColors.divider }]} />
 
             <View style={styles.detailRow}>
-              <Text style={styles.label}>Document ID:</Text>
-              <Text style={styles.valueSmall} numberOfLines={1}>
+              <Text style={[styles.label, { color: themeColors.textSecondary }]}>
+                Document ID:
+              </Text>
+              <Text
+                style={[styles.valueSmall, { color: themeColors.textMuted }]}
+                numberOfLines={1}
+              >
                 {document?.id || 'N/A'}
               </Text>
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: themeColors.divider }]} />
 
             <View style={styles.detailRowVertical}>
-              <Text style={styles.label}>Source URI:</Text>
-              <Text style={styles.uriText} numberOfLines={3} selectable>
+              <Text style={[styles.label, { color: themeColors.textSecondary }]}>
+                Source URI:
+              </Text>
+              <Text
+                style={[styles.uriText, { color: themeColors.textMuted }]}
+                numberOfLines={3}
+                selectable
+              >
                 {document?.uri || 'N/A'}
               </Text>
             </View>
           </View>
 
           {/* Viewer Engine Status Box */}
-          <View style={styles.engineBox}>
-            <Text style={styles.engineTitle}>Viewer Engine Status</Text>
-            <Text style={styles.engineStatus}>
+          <View
+            style={[
+              styles.engineBox,
+              {
+                backgroundColor: themeColors.cardSecondary,
+                borderColor: themeColors.borderLight,
+              },
+            ]}
+          >
+            <Text style={[styles.engineTitle, { color: themeColors.textPrimary }]}>
+              Viewer Engine Status
+            </Text>
+            <Text style={[styles.engineStatus, { color: themeColors.textSecondary }]}>
               {extensionUpper} Viewer Engine initialized and ready to render in the upcoming step.
             </Text>
           </View>
 
           {/* Actions */}
           <TouchableOpacity
-            style={styles.primaryButton}
+            style={[styles.primaryButton, { backgroundColor: themeColors.primary }]}
             onPress={handleBackToHome}
             activeOpacity={0.8}
           >
@@ -146,7 +226,6 @@ export const DocumentViewerScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0F172A',
   },
   scrollContent: {
     flexGrow: 1,
@@ -158,28 +237,28 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '800',
-    color: '#FFFFFF',
     letterSpacing: 0.5,
   },
   headerBadge: {
-    fontSize: 13,
-    color: '#38BDF8',
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
     marginTop: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   card: {
-    backgroundColor: '#1E293B',
     borderRadius: 16,
     padding: 24,
     borderWidth: 1,
-    borderColor: '#334155',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 4,
   },
@@ -193,32 +272,26 @@ const styles = StyleSheet.create({
   docName: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#F8FAFC',
     textAlign: 'center',
     marginBottom: 12,
   },
   statusBadge: {
-    backgroundColor: '#064E3B',
     paddingVertical: 6,
     paddingHorizontal: 14,
     borderRadius: 20,
     alignSelf: 'center',
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#059669',
   },
   statusBadgeText: {
-    color: '#34D399',
     fontSize: 12,
     fontWeight: '700',
   },
   detailsBox: {
-    backgroundColor: '#0F172A',
     borderRadius: 12,
     padding: 14,
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: '#334155',
   },
   detailRow: {
     flexDirection: 'row',
@@ -231,65 +304,51 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#1E293B',
     marginVertical: 2,
   },
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#94A3B8',
   },
   value: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#F1F5F9',
     textAlign: 'right',
     flex: 1,
     marginLeft: 10,
   },
   valueHighlight: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#38BDF8',
-    backgroundColor: '#0369A120',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
   },
   valueSmall: {
     fontSize: 11,
-    color: '#64748B',
     textAlign: 'right',
+    flex: 1,
+    marginLeft: 10,
   },
   uriText: {
     fontSize: 11,
-    color: '#64748B',
+    lineHeight: 16,
     marginTop: 4,
     fontFamily: 'monospace',
   },
   engineBox: {
-    backgroundColor: '#0F172A',
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 14,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#2563EB40',
   },
   engineTitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
-    color: '#60A5FA',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
     marginBottom: 4,
   },
   engineStatus: {
-    fontSize: 13,
-    color: '#94A3B8',
+    fontSize: 12,
     lineHeight: 18,
   },
   primaryButton: {
-    backgroundColor: '#2563EB',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
@@ -298,6 +357,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });
 

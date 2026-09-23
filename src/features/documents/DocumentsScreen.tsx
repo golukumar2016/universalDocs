@@ -20,11 +20,12 @@ import { RecentRepository } from '../../core/database/repositories/recentReposit
 import { DocumentService } from '../../core/filesystem/documentService';
 import { DocumentItem } from '../../shared/types';
 import { formatFileSize, formatDate } from '../../shared/utils';
-import { colors } from '../../shared/theme';
+import { useAppTheme } from '../../shared/hooks';
 
 export const DocumentsScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const isFocused = useIsFocused();
+  const { themeColors, isDark } = useAppTheme();
 
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [recentDocs, setRecentDocs] = useState<DocumentItem[]>([]);
@@ -157,7 +158,13 @@ export const DocumentsScreen: React.FC = () => {
 
     return (
       <TouchableOpacity
-        style={styles.docCard}
+        style={[
+          styles.docCard,
+          {
+            backgroundColor: themeColors.card,
+            borderColor: themeColors.border,
+          },
+        ]}
         onPress={() => handleOpenDoc(item)}
         activeOpacity={0.7}
       >
@@ -166,10 +173,13 @@ export const DocumentsScreen: React.FC = () => {
         </View>
 
         <View style={styles.docInfo}>
-          <Text style={styles.docName} numberOfLines={1}>
+          <Text
+            style={[styles.docName, { color: themeColors.textPrimary }]}
+            numberOfLines={1}
+          >
             {item.name}
           </Text>
-          <Text style={styles.docMeta}>
+          <Text style={[styles.docMeta, { color: themeColors.textMuted }]}>
             {formatFileSize(item.size)} • {formatDate(item.updatedAt)}
           </Text>
         </View>
@@ -185,28 +195,56 @@ export const DocumentsScreen: React.FC = () => {
           style={styles.actionBtn}
           onPress={() => handleDeleteDocument(item)}
         >
-          <Text style={[styles.actionIcon, { color: colors.error }]}>✕</Text>
+          <Text style={[styles.actionIcon, { color: themeColors.error }]}>🗑</Text>
         </TouchableOpacity>
       </TouchableOpacity>
     );
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.headerContainer}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
+      {/* Top Header */}
+      <View
+        style={[
+          styles.headerContainer,
+          {
+            backgroundColor: themeColors.surface,
+            borderBottomColor: themeColors.border,
+            borderBottomWidth: 1,
+          },
+        ]}
+      >
         <View>
-          <Text style={styles.headerTitle}>UniversalDocs</Text>
-          <Text style={styles.headerSubtitle}>Offline Document Workspace</Text>
+          <Text style={[styles.headerTitle, { color: themeColors.textPrimary }]}>
+            My Documents
+          </Text>
+          <Text style={[styles.headerSubtitle, { color: themeColors.textSecondary }]}>
+            Offline SQLite storage
+          </Text>
         </View>
-        <View style={styles.offlineBadge}>
-          <Text style={styles.offlineBadgeText}>⚡ Offline Ready</Text>
+        <View
+          style={[
+            styles.offlineBadge,
+            {
+              backgroundColor: isDark ? '#064E3B' : '#DCFCE7',
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.offlineBadgeText,
+              { color: isDark ? '#34D399' : '#15803D' },
+            ]}
+          >
+            ⚡ Offline Ready
+          </Text>
         </View>
       </View>
 
       {/* Action Bar */}
       <View style={styles.actionsBar}>
         <TouchableOpacity
-          style={[styles.primaryActionBtn, { backgroundColor: colors.primary }]}
+          style={[styles.primaryActionBtn, { backgroundColor: themeColors.primary }]}
           onPress={handlePickDocument}
           activeOpacity={0.8}
         >
@@ -214,27 +252,43 @@ export const DocumentsScreen: React.FC = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.primaryActionBtn, { backgroundColor: '#334155' }]}
+          style={[
+            styles.primaryActionBtn,
+            { backgroundColor: themeColors.cardSecondary, borderWidth: 1, borderColor: themeColors.border },
+          ]}
           onPress={() => setIsModalVisible(true)}
           activeOpacity={0.8}
         >
-          <Text style={styles.primaryActionText}>+ New File</Text>
+          <Text style={[styles.primaryActionText, { color: themeColors.textPrimary }]}>
+            + New File
+          </Text>
         </TouchableOpacity>
       </View>
 
       {/* Recent Section (if any) */}
       {recentDocs.length > 0 && (
         <View style={styles.recentSection}>
-          <Text style={styles.sectionTitle}>Recently Opened</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+            Recently Opened
+          </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {recentDocs.map((doc) => (
               <TouchableOpacity
                 key={doc.id}
-                style={styles.recentPill}
+                style={[
+                  styles.recentPill,
+                  {
+                    backgroundColor: themeColors.card,
+                    borderColor: themeColors.border,
+                  },
+                ]}
                 onPress={() => handleOpenDoc(doc)}
               >
                 <Text style={styles.recentExt}>{doc.extension.toUpperCase()}</Text>
-                <Text style={styles.recentName} numberOfLines={1}>
+                <Text
+                  style={[styles.recentName, { color: themeColors.textPrimary }]}
+                  numberOfLines={1}
+                >
                   {doc.name}
                 </Text>
               </TouchableOpacity>
@@ -245,11 +299,13 @@ export const DocumentsScreen: React.FC = () => {
 
       {/* Main Document List */}
       <View style={styles.listContainer}>
-        <Text style={styles.sectionTitle}>Local Documents ({documents.length})</Text>
+        <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>
+          Local Documents ({documents.length})
+        </Text>
 
         {isLoading ? (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
+            <ActivityIndicator size="large" color={themeColors.primary} />
           </View>
         ) : (
           <FlatList
@@ -260,6 +316,7 @@ export const DocumentsScreen: React.FC = () => {
             refreshControl={
               <RefreshControl
                 refreshing={isRefreshing}
+                tintColor={themeColors.primary}
                 onRefresh={() => {
                   setIsRefreshing(true);
                   loadData();
@@ -268,8 +325,10 @@ export const DocumentsScreen: React.FC = () => {
             }
             ListEmptyComponent={
               <View style={styles.emptyContent}>
-                <Text style={styles.emptyTitle}>No documents yet</Text>
-                <Text style={styles.emptySubtitle}>
+                <Text style={[styles.emptyTitle, { color: themeColors.textPrimary }]}>
+                  No documents yet
+                </Text>
+                <Text style={[styles.emptySubtitle, { color: themeColors.textSecondary }]}>
                   Import files from your device or create a new text file to begin.
                 </Text>
               </View>
@@ -281,13 +340,30 @@ export const DocumentsScreen: React.FC = () => {
       {/* Create New File Modal */}
       <Modal visible={isModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Create New Document</Text>
+          <View
+            style={[
+              styles.modalContent,
+              {
+                backgroundColor: themeColors.surface,
+                borderColor: themeColors.border,
+              },
+            ]}
+          >
+            <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+              Create New Document
+            </Text>
 
             <TextInput
-              style={styles.modalInput}
+              style={[
+                styles.modalInput,
+                {
+                  backgroundColor: themeColors.inputBackground,
+                  borderColor: themeColors.border,
+                  color: themeColors.textPrimary,
+                },
+              ]}
               placeholder="e.g. MeetingNotes, Ideas"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={themeColors.textMuted}
               value={newFileName}
               onChangeText={setNewFileName}
               autoFocus
@@ -299,14 +375,22 @@ export const DocumentsScreen: React.FC = () => {
                   key={ext}
                   style={[
                     styles.extOption,
-                    selectedExtension === ext && styles.extOptionSelected,
+                    {
+                      backgroundColor: themeColors.cardSecondary,
+                      borderColor: themeColors.border,
+                    },
+                    selectedExtension === ext && {
+                      backgroundColor: themeColors.primary,
+                      borderColor: themeColors.primary,
+                    },
                   ]}
                   onPress={() => setSelectedExtension(ext)}
                 >
                   <Text
                     style={[
                       styles.extOptionText,
-                      selectedExtension === ext && styles.extOptionTextSelected,
+                      { color: themeColors.textSecondary },
+                      selectedExtension === ext && { color: '#FFFFFF', fontWeight: '700' },
                     ]}
                   >
                     .{ext}
@@ -317,17 +401,19 @@ export const DocumentsScreen: React.FC = () => {
 
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={[styles.modalBtn, styles.modalBtnCancel]}
+                style={[styles.modalBtn, { backgroundColor: themeColors.cardSecondary }]}
                 onPress={() => {
                   setIsModalVisible(false);
                   setNewFileName('');
                 }}
               >
-                <Text style={styles.modalBtnCancelText}>Cancel</Text>
+                <Text style={[styles.modalBtnCancelText, { color: themeColors.textSecondary }]}>
+                  Cancel
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.modalBtn, styles.modalBtnConfirm]}
+                style={[styles.modalBtn, { backgroundColor: themeColors.primary }]}
                 onPress={handleCreateNewDocument}
               >
                 <Text style={styles.modalBtnConfirmText}>Create</Text>
@@ -343,7 +429,6 @@ export const DocumentsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   headerContainer: {
     flexDirection: 'row',
@@ -356,27 +441,24 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: colors.textPrimary,
   },
   headerSubtitle: {
     fontSize: 13,
-    color: colors.textSecondary,
     marginTop: 2,
   },
   offlineBadge: {
-    backgroundColor: '#DCFCE7',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 16,
   },
   offlineBadgeText: {
-    color: '#15803D',
     fontSize: 12,
     fontWeight: '600',
   },
   actionsBar: {
     flexDirection: 'row',
     paddingHorizontal: 16,
+    paddingTop: 16,
     gap: 12,
     marginBottom: 16,
   },
@@ -399,15 +481,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.textPrimary,
     marginBottom: 10,
   },
   recentPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: colors.border,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
@@ -417,7 +496,7 @@ const styles = StyleSheet.create({
   recentExt: {
     fontSize: 10,
     fontWeight: '700',
-    color: colors.primary,
+    color: '#2563EB',
     backgroundColor: '#EFF6FF',
     paddingHorizontal: 4,
     paddingVertical: 2,
@@ -426,7 +505,6 @@ const styles = StyleSheet.create({
   },
   recentName: {
     fontSize: 13,
-    color: colors.textPrimary,
     flexShrink: 1,
   },
   listContainer: {
@@ -442,12 +520,10 @@ const styles = StyleSheet.create({
   docCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   extBadge: {
     width: 44,
@@ -468,11 +544,9 @@ const styles = StyleSheet.create({
   docName: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.textPrimary,
   },
   docMeta: {
     fontSize: 12,
-    color: colors.textMuted,
     marginTop: 4,
   },
   actionBtn: {
@@ -496,42 +570,38 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: colors.textPrimary,
     marginBottom: 6,
   },
   emptySubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
+    fontSize: 13,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   modalContent: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    maxWidth: 340,
+    borderRadius: 16,
     padding: 20,
+    borderWidth: 1,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.textPrimary,
     marginBottom: 16,
   },
   modalInput: {
     borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 15,
     marginBottom: 16,
-    color: colors.textPrimary,
   },
   extPickerRow: {
     flexDirection: 'row',
@@ -541,26 +611,17 @@ const styles = StyleSheet.create({
   extOption: {
     flex: 1,
     paddingVertical: 8,
+    alignItems: 'center',
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-  },
-  extOptionSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
   },
   extOptionText: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  extOptionTextSelected: {
-    color: '#FFFFFF',
   },
   modalActions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   modalBtn: {
     flex: 1,
@@ -568,19 +629,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  modalBtnCancel: {
-    backgroundColor: '#F1F5F9',
-  },
   modalBtnCancelText: {
-    color: colors.textSecondary,
     fontWeight: '600',
-  },
-  modalBtnConfirm: {
-    backgroundColor: colors.primary,
+    fontSize: 14,
   },
   modalBtnConfirmText: {
     color: '#FFFFFF',
     fontWeight: '600',
+    fontSize: 14,
   },
 });
 

@@ -9,11 +9,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { PermissionService } from '../../core/permissions/permissionService';
-import { colors } from '../../shared/theme';
+import { useAppTheme } from '../../shared/hooks';
 
 export const ScannerScreen: React.FC = () => {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState<boolean>(true);
+  const { themeColors, isDark } = useAppTheme();
 
   useEffect(() => {
     checkPermission();
@@ -48,54 +49,80 @@ export const ScannerScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       <View style={styles.container}>
-        <Text style={styles.title}>Document Scanner</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, { color: themeColors.textPrimary }]}>Document Scanner</Text>
+        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
           Scan physical paper documents into high-clarity offline PDF files.
         </Text>
 
         {/* Scanner Pipeline Overview Card */}
-        <View style={styles.pipelineCard}>
-          <Text style={styles.pipelineTitle}>Offline Scanning Workflow</Text>
+        <View
+          style={[
+            styles.pipelineCard,
+            {
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
+          <Text style={[styles.pipelineTitle, { color: themeColors.textPrimary }]}>
+            Offline Scanning Workflow
+          </Text>
           <View style={styles.stepRow}>
-            <View style={styles.stepCircle}>
-              <Text style={styles.stepNum}>1</Text>
+            <View style={[styles.stepCircle, { backgroundColor: themeColors.badgeBg }]}>
+              <Text style={[styles.stepNum, { color: themeColors.primary }]}>1</Text>
             </View>
-            <Text style={styles.stepText}>Camera Capture</Text>
+            <Text style={[styles.stepText, { color: themeColors.textPrimary }]}>
+              Camera Capture
+            </Text>
           </View>
-          <View style={styles.stepLine} />
+          <View style={[styles.stepLine, { backgroundColor: themeColors.border }]} />
           <View style={styles.stepRow}>
-            <View style={styles.stepCircle}>
-              <Text style={styles.stepNum}>2</Text>
+            <View style={[styles.stepCircle, { backgroundColor: themeColors.badgeBg }]}>
+              <Text style={[styles.stepNum, { color: themeColors.primary }]}>2</Text>
             </View>
-            <Text style={styles.stepText}>Edge Detection & Crop</Text>
+            <Text style={[styles.stepText, { color: themeColors.textPrimary }]}>
+              Edge Detection & Crop
+            </Text>
           </View>
-          <View style={styles.stepLine} />
+          <View style={[styles.stepLine, { backgroundColor: themeColors.border }]} />
           <View style={styles.stepRow}>
-            <View style={styles.stepCircle}>
-              <Text style={styles.stepNum}>3</Text>
+            <View style={[styles.stepCircle, { backgroundColor: themeColors.badgeBg }]}>
+              <Text style={[styles.stepNum, { color: themeColors.primary }]}>3</Text>
             </View>
-            <Text style={styles.stepText}>Color & Contrast Filter</Text>
+            <Text style={[styles.stepText, { color: themeColors.textPrimary }]}>
+              Color & Contrast Filter
+            </Text>
           </View>
-          <View style={styles.stepLine} />
+          <View style={[styles.stepLine, { backgroundColor: themeColors.border }]} />
           <View style={styles.stepRow}>
-            <View style={styles.stepCircle}>
-              <Text style={styles.stepNum}>4</Text>
+            <View style={[styles.stepCircle, { backgroundColor: themeColors.badgeBg }]}>
+              <Text style={[styles.stepNum, { color: themeColors.primary }]}>4</Text>
             </View>
-            <Text style={styles.stepText}>Export to Local PDF & Save</Text>
+            <Text style={[styles.stepText, { color: themeColors.textPrimary }]}>
+              Export to Local PDF & Save
+            </Text>
           </View>
         </View>
 
         {/* Camera Permission State */}
-        <View style={styles.statusBox}>
+        <View
+          style={[
+            styles.statusBox,
+            {
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
           {isChecking ? (
-            <ActivityIndicator size="small" color={colors.primary} />
+            <ActivityIndicator size="small" color={themeColors.primary} />
           ) : hasCameraPermission ? (
             <View style={styles.permissionReady}>
               <Text style={styles.readyBadge}>✓ Camera Ready</Text>
               <TouchableOpacity
-                style={styles.scanBtn}
+                style={[styles.scanBtn, { backgroundColor: themeColors.primary }]}
                 onPress={() => Alert.alert('Camera', 'Scanner viewfinder initialized.')}
               >
                 <Text style={styles.scanBtnText}>📸 Start Scan Session</Text>
@@ -103,11 +130,11 @@ export const ScannerScreen: React.FC = () => {
             </View>
           ) : (
             <View style={styles.permissionNeed}>
-              <Text style={styles.needText}>
+              <Text style={[styles.needText, { color: themeColors.textSecondary }]}>
                 Camera permission is required to use the document scanner.
               </Text>
               <TouchableOpacity
-                style={styles.permissionBtn}
+                style={[styles.permissionBtn, { backgroundColor: themeColors.primary }]}
                 onPress={handleRequestPermission}
               >
                 <Text style={styles.permissionBtnText}>Grant Camera Permission</Text>
@@ -123,7 +150,6 @@ export const ScannerScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   container: {
     flex: 1,
@@ -132,27 +158,22 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: colors.textPrimary,
   },
   subtitle: {
     fontSize: 13,
-    color: colors.textSecondary,
     marginTop: 4,
     marginBottom: 20,
     lineHeight: 18,
   },
   pipelineCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 20,
+    padding: 18,
     borderWidth: 1,
-    borderColor: colors.border,
     marginBottom: 24,
   },
   pipelineTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.textPrimary,
     marginBottom: 16,
   },
   stepRow: {
@@ -163,7 +184,6 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -171,26 +191,21 @@ const styles = StyleSheet.create({
   stepNum: {
     fontSize: 13,
     fontWeight: '700',
-    color: colors.primary,
   },
   stepText: {
     fontSize: 14,
     fontWeight: '500',
-    color: colors.textPrimary,
   },
   stepLine: {
     width: 2,
     height: 16,
-    backgroundColor: colors.border,
     marginLeft: 13,
     marginVertical: 2,
   },
   statusBox: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 18,
     borderWidth: 1,
-    borderColor: colors.border,
     alignItems: 'center',
   },
   permissionReady: {
@@ -204,7 +219,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   scanBtn: {
-    backgroundColor: colors.primary,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 10,
@@ -222,13 +236,11 @@ const styles = StyleSheet.create({
   },
   needText: {
     fontSize: 14,
-    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 14,
     lineHeight: 20,
   },
   permissionBtn: {
-    backgroundColor: colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,

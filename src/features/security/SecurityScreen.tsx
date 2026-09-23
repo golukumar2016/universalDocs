@@ -13,9 +13,11 @@ import {
 import ReactNativeBiometrics, { BiometryType } from 'react-native-biometrics';
 import { SecureStorage } from '../../core/storage/secureStorage';
 import { STORAGE_KEYS } from '../../shared/constants';
-import { colors } from '../../shared/theme';
+import { useAppTheme, ThemeMode, THEME_OPTIONS } from '../../shared/hooks';
 
 export const SecurityScreen: React.FC = () => {
+  const { themeColors, themeMode, setThemeMode, isDark } = useAppTheme();
+
   const [biometryType, setBiometryType] = useState<BiometryType | 'None'>('None');
   const [isBiometricAvailable, setIsBiometricAvailable] = useState<boolean>(false);
   const [isBiometricEnabled, setIsBiometricEnabled] = useState<boolean>(false);
@@ -80,21 +82,22 @@ export const SecurityScreen: React.FC = () => {
     ]);
   };
 
-  const handleToggleBiometrics = async (value: boolean) => {
+  const handleToggleBiometrics = async (enabled: boolean) => {
+    if (!isBiometricAvailable) return;
+
     try {
-      if (value) {
+      if (enabled) {
         const result = await rnBiometrics.simplePrompt({
-          promptMessage: 'Confirm fingerprint or face to enable biometric lock',
+          promptMessage: 'Confirm fingerprint or face to enable biometric unlock',
         });
         if (result.success) {
           await SecureStorage.setSecureItem(STORAGE_KEYS.BIOMETRIC_ENABLED, 'true');
           setIsBiometricEnabled(true);
-          Alert.alert('Success', 'Biometric lock enabled.');
         } else {
           setIsBiometricEnabled(false);
         }
       } else {
-        await SecureStorage.setSecureItem(STORAGE_KEYS.BIOMETRIC_ENABLED, 'false');
+        await SecureStorage.removeSecureItem(STORAGE_KEYS.BIOMETRIC_ENABLED);
         setIsBiometricEnabled(false);
       }
     } catch (error: any) {
@@ -119,54 +122,151 @@ export const SecurityScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.headerTitle}>Security & Vault</Text>
-        <Text style={styles.headerSub}>
+        <Text style={[styles.headerTitle, { color: themeColors.textPrimary }]}>
+          Security & Vault
+        </Text>
+        <Text style={[styles.headerSub, { color: themeColors.textSecondary }]}>
           Protect your offline documents with local biometrics and PIN encryption.
         </Text>
 
+        {/* Appearance & Themes Section */}
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
+          <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>
+            🎨 App Appearance & Theme
+          </Text>
+          <Text style={[styles.cardDesc, { color: themeColors.textMuted }]}>
+            Select your preferred display theme. All themes support offline viewing.
+          </Text>
+
+          <View style={styles.themeOptionsGrid}>
+            {THEME_OPTIONS.map((opt) => {
+              const isSelected = themeMode === opt.id;
+              return (
+                <TouchableOpacity
+                  key={opt.id}
+                  style={[
+                    styles.themeOptionCard,
+                    {
+                      backgroundColor: isSelected ? themeColors.cardSecondary : themeColors.card,
+                      borderColor: isSelected ? themeColors.primary : themeColors.border,
+                    },
+                  ]}
+                  onPress={() => setThemeMode(opt.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.themeCardHeader}>
+                    <View
+                      style={[
+                        styles.themeColorDot,
+                        { backgroundColor: opt.colorPreview },
+                      ]}
+                    />
+                    {isSelected && (
+                      <Text style={[styles.themeCheckmark, { color: themeColors.primary }]}>
+                        ✓
+                      </Text>
+                    )}
+                  </View>
+                  <Text
+                    style={[
+                      styles.themeName,
+                      {
+                        color: isSelected ? themeColors.primary : themeColors.textPrimary,
+                        fontWeight: isSelected ? '700' : '500',
+                      },
+                    ]}
+                  >
+                    {opt.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
         {/* Biometrics Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Biometric Lock</Text>
-          <Text style={styles.cardDesc}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
+          <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>
+            Biometric Lock
+          </Text>
+          <Text style={[styles.cardDesc, { color: themeColors.textMuted }]}>
             Sensor: {isBiometricAvailable ? biometryType : 'Not Available on this device'}
           </Text>
 
           <View style={styles.settingRow}>
-            <Text style={styles.settingLabel}>Enable {biometryType} unlock</Text>
+            <Text style={[styles.settingLabel, { color: themeColors.textPrimary }]}>
+              Enable {biometryType} unlock
+            </Text>
             <Switch
               disabled={!isBiometricAvailable}
               value={isBiometricEnabled}
               onValueChange={handleToggleBiometrics}
-              trackColor={{ false: '#E2E8F0', true: colors.primary }}
+              trackColor={{ false: themeColors.border, true: themeColors.primary }}
+              thumbColor={isBiometricEnabled ? '#FFFFFF' : themeColors.textMuted}
             />
           </View>
 
           {isBiometricAvailable && (
             <TouchableOpacity
-              style={styles.actionBtn}
+              style={[styles.actionBtn, { backgroundColor: themeColors.cardSecondary }]}
               onPress={handleTestBiometrics}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionBtnText}>Test {biometryType} Authentication</Text>
+              <Text style={[styles.actionBtnText, { color: themeColors.primary }]}>
+                Test {biometryType} Authentication
+              </Text>
             </TouchableOpacity>
           )}
         </View>
 
         {/* PIN Security Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>App PIN Protection</Text>
-          <Text style={styles.cardDesc}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
+          <Text style={[styles.cardTitle, { color: themeColors.textPrimary }]}>
+            App PIN Protection
+          </Text>
+          <Text style={[styles.cardDesc, { color: themeColors.textMuted }]}>
             Status: {hasPinSet ? '● Active' : '○ Not Configured'}
           </Text>
 
           {isSettingPin ? (
             <View style={styles.pinForm}>
               <TextInput
-                style={styles.pinInput}
+                style={[
+                  styles.pinInput,
+                  {
+                    backgroundColor: themeColors.inputBackground,
+                    borderColor: themeColors.border,
+                    color: themeColors.textPrimary,
+                  },
+                ]}
                 placeholder="Enter 4-6 digit PIN"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={themeColors.textMuted}
                 secureTextEntry
                 keyboardType="numeric"
                 maxLength={6}
@@ -175,17 +275,19 @@ export const SecurityScreen: React.FC = () => {
               />
               <View style={styles.pinBtnRow}>
                 <TouchableOpacity
-                  style={[styles.smallBtn, { backgroundColor: '#E2E8F0' }]}
+                  style={[styles.smallBtn, { backgroundColor: themeColors.cardSecondary }]}
                   onPress={() => {
                     setIsSettingPin(false);
                     setPinInput('');
                   }}
                 >
-                  <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>Cancel</Text>
+                  <Text style={{ color: themeColors.textSecondary, fontWeight: '600' }}>
+                    Cancel
+                  </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.smallBtn, { backgroundColor: colors.primary }]}
+                  style={[styles.smallBtn, { backgroundColor: themeColors.primary }]}
                   onPress={handleSavePin}
                 >
                   <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Save PIN</Text>
@@ -196,17 +298,26 @@ export const SecurityScreen: React.FC = () => {
             <View style={styles.pinActions}>
               {hasPinSet ? (
                 <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: '#FEE2E2' }]}
+                  style={[
+                    styles.actionBtn,
+                    {
+                      backgroundColor: isDark ? '#7F1D1D' : '#FEE2E2',
+                    },
+                  ]}
                   onPress={handleRemovePin}
                 >
-                  <Text style={[styles.actionBtnText, { color: colors.error }]}>Disable PIN</Text>
+                  <Text style={[styles.actionBtnText, { color: themeColors.error }]}>
+                    Disable PIN
+                  </Text>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: colors.primary }]}
+                  style={[styles.actionBtn, { backgroundColor: themeColors.primary }]}
                   onPress={() => setIsSettingPin(true)}
                 >
-                  <Text style={styles.actionBtnText}>Set Security PIN</Text>
+                  <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>
+                    Set Security PIN
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -214,9 +325,20 @@ export const SecurityScreen: React.FC = () => {
         </View>
 
         {/* Privacy Note */}
-        <View style={styles.privacyNote}>
-          <Text style={styles.privacyTitle}>🔒 100% Local & Offline</Text>
-          <Text style={styles.privacyText}>
+        <View
+          style={[
+            styles.privacyNote,
+            {
+              backgroundColor: themeColors.cardSecondary,
+              borderColor: themeColors.border,
+              borderWidth: 1,
+            },
+          ]}
+        >
+          <Text style={[styles.privacyTitle, { color: themeColors.textPrimary }]}>
+            🔒 100% Local & Offline
+          </Text>
+          <Text style={[styles.privacyText, { color: themeColors.textSecondary }]}>
             All documents, authentication keys, and credentials are stored exclusively on this device
             using Android Keystore / iOS Keychain. No data is sent to external servers.
           </Text>
@@ -229,7 +351,6 @@ export const SecurityScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   container: {
     padding: 16,
@@ -237,33 +358,57 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: colors.textPrimary,
   },
   headerSub: {
     fontSize: 13,
-    color: colors.textSecondary,
     marginTop: 4,
     marginBottom: 20,
     lineHeight: 18,
   },
   card: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.textPrimary,
   },
   cardDesc: {
     fontSize: 13,
-    color: colors.textMuted,
     marginTop: 2,
     marginBottom: 14,
+  },
+  themeOptionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 4,
+  },
+  themeOptionCard: {
+    width: '48%',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1.5,
+  },
+  themeCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  themeColorDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+  },
+  themeCheckmark: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  themeName: {
+    fontSize: 13,
   },
   settingRow: {
     flexDirection: 'row',
@@ -273,7 +418,6 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 14,
-    color: colors.textPrimary,
     fontWeight: '500',
   },
   actionBtn: {
@@ -281,25 +425,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
   },
   actionBtnText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.primary,
   },
   pinForm: {
     marginTop: 8,
   },
   pinInput: {
     borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
     textAlign: 'center',
     letterSpacing: 8,
-    color: colors.textPrimary,
     marginBottom: 12,
   },
   pinBtnRow: {
@@ -316,20 +456,18 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   privacyNote: {
-    backgroundColor: '#F1F5F9',
     borderRadius: 12,
     padding: 16,
     marginTop: 8,
+    marginBottom: 24,
   },
   privacyTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: colors.textPrimary,
     marginBottom: 6,
   },
   privacyText: {
     fontSize: 13,
-    color: colors.textSecondary,
     lineHeight: 18,
   },
 });

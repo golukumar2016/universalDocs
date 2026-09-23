@@ -15,10 +15,12 @@ import { useFileBrowser } from '../hooks/useFileBrowser';
 import { FileList } from '../components/FileList';
 import { BrowserItem, SortOption, SortDirection } from '../services/fileBrowserService';
 import { DocumentResolver } from '../../../core/documents/documentResolver';
+import { useAppTheme } from '../../../shared/hooks';
 
 export const FileBrowserScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const { themeColors, isDark } = useAppTheme();
 
   const {
     currentLocation,
@@ -102,30 +104,44 @@ export const FileBrowserScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* Top App Bar */}
-      <View style={styles.topBar}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
+      {/* Top Header Bar */}
+      <View
+        style={[
+          styles.topBar,
+          {
+            backgroundColor: themeColors.surface,
+            borderBottomColor: themeColors.border,
+          },
+        ]}
+      >
         <TouchableOpacity
           style={styles.backButton}
           onPress={handleBackPress}
           hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           activeOpacity={0.7}
         >
-          <Text style={styles.backIcon}>←</Text>
+          <Text style={[styles.backIcon, { color: themeColors.textPrimary }]}>←</Text>
         </TouchableOpacity>
 
         <View style={styles.titleWrapper}>
-          <Text style={styles.topBarTitle} numberOfLines={1}>
+          <Text style={[styles.topBarTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
             {currentLocation.name}
           </Text>
-          <Text style={styles.itemCountSubtitle}>
+          <Text style={[styles.itemCountSubtitle, { color: themeColors.textSecondary }]}>
             {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'items'}
           </Text>
         </View>
 
         <View style={styles.topBarActions}>
           <TouchableOpacity
-            style={styles.actionIconButton}
+            style={[
+              styles.actionIconButton,
+              {
+                backgroundColor: themeColors.cardSecondary,
+                borderColor: themeColors.border,
+              },
+            ]}
             onPress={() => setIsLocationsModalVisible(true)}
             activeOpacity={0.7}
           >
@@ -133,11 +149,17 @@ export const FileBrowserScreen: React.FC = () => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.actionIconButton}
+            style={[
+              styles.actionIconButton,
+              {
+                backgroundColor: themeColors.cardSecondary,
+                borderColor: themeColors.border,
+              },
+            ]}
             onPress={() => setIsSortModalVisible(true)}
             activeOpacity={0.7}
           >
-            <Text style={styles.actionIconText}>⇅</Text>
+            <Text style={[styles.actionIconText, { color: themeColors.textPrimary }]}>⇅</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -159,7 +181,15 @@ export const FileBrowserScreen: React.FC = () => {
       )}
 
       {/* Breadcrumb Navigation Trail */}
-      <View style={styles.breadcrumbBar}>
+      <View
+        style={[
+          styles.breadcrumbBar,
+          {
+            backgroundColor: themeColors.cardSecondary,
+            borderBottomColor: themeColors.borderLight,
+          },
+        ]}
+      >
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -172,12 +202,12 @@ export const FileBrowserScreen: React.FC = () => {
             hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
             activeOpacity={0.7}
           >
-            <Text style={styles.breadcrumbRoot}>🏠 Storage</Text>
+            <Text style={[styles.breadcrumbRoot, { color: themeColors.primary }]}>🏠 Storage</Text>
           </TouchableOpacity>
 
           {locationStack.map((loc, index) => (
             <React.Fragment key={`${loc.path}_${index}`}>
-              <Text style={styles.breadcrumbSeparator}>›</Text>
+              <Text style={[styles.breadcrumbSeparator, { color: themeColors.textMuted }]}>›</Text>
               <TouchableOpacity
                 style={styles.breadcrumbTouchable}
                 onPress={() => navigateToBreadcrumb(index)}
@@ -188,7 +218,11 @@ export const FileBrowserScreen: React.FC = () => {
                 <Text
                   style={[
                     styles.breadcrumbItem,
-                    index === locationStack.length - 1 && styles.breadcrumbItemActive,
+                    { color: themeColors.textSecondary },
+                    index === locationStack.length - 1 && [
+                      styles.breadcrumbItemActive,
+                      { color: themeColors.textPrimary },
+                    ],
                   ]}
                   numberOfLines={1}
                 >
@@ -202,12 +236,20 @@ export const FileBrowserScreen: React.FC = () => {
 
       {/* Search Input Bar */}
       <View style={styles.searchBarContainer}>
-        <View style={styles.searchBox}>
+        <View
+          style={[
+            styles.searchBox,
+            {
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: themeColors.textPrimary }]}
             placeholder={`Search in ${currentLocation.name}...`}
-            placeholderTextColor="#64748B"
+            placeholderTextColor={themeColors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCorrect={false}
@@ -215,7 +257,7 @@ export const FileBrowserScreen: React.FC = () => {
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Text style={styles.clearSearchIcon}>✕</Text>
+              <Text style={[styles.clearSearchIcon, { color: themeColors.textMuted }]}>✕</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -259,31 +301,47 @@ export const FileBrowserScreen: React.FC = () => {
           onPress={() => setIsSortModalVisible(false)}
         >
           <View
-            style={styles.modalContent}
+            style={[
+              styles.modalContent,
+              {
+                backgroundColor: themeColors.surface,
+                borderColor: themeColors.border,
+              },
+            ]}
             onStartShouldSetResponder={() => true}
           >
-            <Text style={styles.modalTitle}>Sort Items</Text>
-            <Text style={styles.modalSubtitle}>Folders will always appear first</Text>
+            <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>Sort Items</Text>
+            <Text style={[styles.modalSubtitle, { color: themeColors.textSecondary }]}>
+              Folders will always appear first
+            </Text>
 
             {(['name', 'date', 'size', 'type'] as SortOption[]).map((opt) => (
               <TouchableOpacity
                 key={opt}
                 style={[
                   styles.modalOption,
-                  sortBy === opt && styles.modalOptionSelected,
+                  sortBy === opt && {
+                    backgroundColor: themeColors.cardSecondary,
+                  },
                 ]}
                 onPress={() => selectSort(opt)}
               >
                 <Text
                   style={[
                     styles.modalOptionText,
-                    sortBy === opt && styles.modalOptionTextSelected,
+                    { color: themeColors.textSecondary },
+                    sortBy === opt && {
+                      color: themeColors.primary,
+                      fontWeight: '700',
+                    },
                   ]}
                 >
                   By {opt.charAt(0).toUpperCase() + opt.slice(1)}
                   {sortBy === opt && ` (${sortDirection === 'asc' ? '↑ Asc' : '↓ Desc'})`}
                 </Text>
-                {sortBy === opt && <Text style={styles.checkmark}>✓</Text>}
+                {sortBy === opt && (
+                  <Text style={[styles.checkmark, { color: themeColors.primary }]}>✓</Text>
+                )}
               </TouchableOpacity>
             ))}
           </View>
@@ -303,13 +361,21 @@ export const FileBrowserScreen: React.FC = () => {
           onPress={() => setIsLocationsModalVisible(false)}
         >
           <View
-            style={styles.modalContent}
+            style={[
+              styles.modalContent,
+              {
+                backgroundColor: themeColors.surface,
+                borderColor: themeColors.border,
+              },
+            ]}
             onStartShouldSetResponder={() => true}
           >
-            <Text style={styles.modalTitle}>Storage Locations</Text>
+            <Text style={[styles.modalTitle, { color: themeColors.textPrimary }]}>
+              Storage Locations
+            </Text>
 
             <TouchableOpacity
-              style={styles.locationOption}
+              style={[styles.locationOption, { borderBottomColor: themeColors.divider }]}
               onPress={() => {
                 setIsLocationsModalVisible(false);
                 setLocation({
@@ -321,13 +387,17 @@ export const FileBrowserScreen: React.FC = () => {
             >
               <Text style={styles.locationIcon}>📥</Text>
               <View>
-                <Text style={styles.locationName}>Downloads</Text>
-                <Text style={styles.locationPath}>/storage/emulated/0/Download</Text>
+                <Text style={[styles.locationName, { color: themeColors.textPrimary }]}>
+                  Downloads
+                </Text>
+                <Text style={[styles.locationPath, { color: themeColors.textSecondary }]}>
+                  /storage/emulated/0/Download
+                </Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.locationOption}
+              style={[styles.locationOption, { borderBottomColor: themeColors.divider }]}
               onPress={() => {
                 setIsLocationsModalVisible(false);
                 setLocation({
@@ -339,13 +409,17 @@ export const FileBrowserScreen: React.FC = () => {
             >
               <Text style={styles.locationIcon}>📄</Text>
               <View>
-                <Text style={styles.locationName}>Documents</Text>
-                <Text style={styles.locationPath}>/storage/emulated/0/Documents</Text>
+                <Text style={[styles.locationName, { color: themeColors.textPrimary }]}>
+                  Documents
+                </Text>
+                <Text style={[styles.locationPath, { color: themeColors.textSecondary }]}>
+                  /storage/emulated/0/Documents
+                </Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.locationOption}
+              style={[styles.locationOption, { borderBottomColor: themeColors.divider }]}
               onPress={() => {
                 setIsLocationsModalVisible(false);
                 setLocation({
@@ -357,8 +431,12 @@ export const FileBrowserScreen: React.FC = () => {
             >
               <Text style={styles.locationIcon}>💾</Text>
               <View>
-                <Text style={styles.locationName}>Internal Storage</Text>
-                <Text style={styles.locationPath}>/storage/emulated/0</Text>
+                <Text style={[styles.locationName, { color: themeColors.textPrimary }]}>
+                  Internal Storage
+                </Text>
+                <Text style={[styles.locationPath, { color: themeColors.textSecondary }]}>
+                  /storage/emulated/0
+                </Text>
               </View>
             </TouchableOpacity>
 
@@ -371,8 +449,12 @@ export const FileBrowserScreen: React.FC = () => {
             >
               <Text style={styles.locationIcon}>📁</Text>
               <View>
-                <Text style={styles.locationName}>Choose Folder via SAF...</Text>
-                <Text style={styles.locationPath}>Android Storage Access Framework</Text>
+                <Text style={[styles.locationName, { color: themeColors.textPrimary }]}>
+                  Choose Folder via SAF...
+                </Text>
+                <Text style={[styles.locationPath, { color: themeColors.textSecondary }]}>
+                  Android Storage Access Framework
+                </Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -385,7 +467,6 @@ export const FileBrowserScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0F172A',
   },
   topBar: {
     flexDirection: 'row',
@@ -393,7 +474,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
   },
   backButton: {
     padding: 6,
@@ -401,7 +481,6 @@ const styles = StyleSheet.create({
   },
   backIcon: {
     fontSize: 22,
-    color: '#F8FAFC',
     fontWeight: '700',
   },
   titleWrapper: {
@@ -410,11 +489,9 @@ const styles = StyleSheet.create({
   topBarTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#F8FAFC',
   },
   itemCountSubtitle: {
     fontSize: 12,
-    color: '#94A3B8',
     marginTop: 1,
   },
   topBarActions: {
@@ -425,15 +502,12 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 8,
-    backgroundColor: '#1E293B',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
   },
   actionIconText: {
     fontSize: 18,
-    color: '#F8FAFC',
   },
   permissionBanner: {
     backgroundColor: '#78350F',
@@ -461,10 +535,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   breadcrumbBar: {
-    backgroundColor: '#1E293B',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
   },
   breadcrumbScroll: {
     paddingHorizontal: 16,
@@ -476,21 +548,17 @@ const styles = StyleSheet.create({
   },
   breadcrumbRoot: {
     fontSize: 13,
-    color: '#38BDF8',
     fontWeight: '600',
   },
   breadcrumbSeparator: {
     fontSize: 14,
-    color: '#64748B',
     marginHorizontal: 6,
   },
   breadcrumbItem: {
     fontSize: 13,
-    color: '#94A3B8',
     maxWidth: 120,
   },
   breadcrumbItemActive: {
-    color: '#F8FAFC',
     fontWeight: '700',
   },
   searchBarContainer: {
@@ -500,12 +568,10 @@ const styles = StyleSheet.create({
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
     borderRadius: 10,
     paddingHorizontal: 12,
     height: 40,
     borderWidth: 1,
-    borderColor: '#334155',
   },
   searchIcon: {
     fontSize: 14,
@@ -513,12 +579,10 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: '#F8FAFC',
     fontSize: 14,
     paddingVertical: 0,
   },
   clearSearchIcon: {
-    color: '#94A3B8',
     fontSize: 14,
     padding: 4,
   },
@@ -559,21 +623,17 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 340,
-    backgroundColor: '#1E293B',
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#334155',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#F8FAFC',
     marginBottom: 4,
   },
   modalSubtitle: {
     fontSize: 12,
-    color: '#94A3B8',
     marginBottom: 16,
   },
   modalOption: {
@@ -585,19 +645,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 6,
   },
-  modalOptionSelected: {
-    backgroundColor: '#0F172A',
-  },
   modalOptionText: {
     fontSize: 14,
-    color: '#CBD5E1',
-  },
-  modalOptionTextSelected: {
-    color: '#38BDF8',
-    fontWeight: '700',
   },
   checkmark: {
-    color: '#38BDF8',
     fontSize: 16,
     fontWeight: '700',
   },
@@ -606,7 +657,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#334155',
   },
   safOption: {
     borderBottomWidth: 0,
@@ -619,11 +669,9 @@ const styles = StyleSheet.create({
   locationName: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#F8FAFC',
   },
   locationPath: {
     fontSize: 11,
-    color: '#64748B',
     marginTop: 2,
   },
 });

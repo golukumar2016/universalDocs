@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
-  Platform,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
@@ -20,18 +20,19 @@ import { RecentRepository } from '../../core/database/repositories/recentReposit
 import { FileBrowserService } from './services/fileBrowserService';
 import { Document, DocumentItem } from '../../shared/types';
 import { formatFileSize, formatDate } from '../../shared/utils';
-import { useAppTheme } from '../../shared/hooks';
+import { useAppTheme, THEME_OPTIONS } from '../../shared/hooks';
 
 export const InitialDocumentScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
-  const { isDark, themeColors } = useAppTheme();
+  const { themeColors, isDark, themeMode, setThemeMode } = useAppTheme();
 
   const [resolvedDoc, setResolvedDoc] = useState<ResolvedDocument | null>(null);
   const [recentDocs, setRecentDocs] = useState<DocumentItem[]>([]);
   const [isPicking, setIsPicking] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [defaultDirs, setDefaultDirs] = useState<{ download?: string; documents?: string }>({});
+  const [isThemeModalVisible, setIsThemeModalVisible] = useState<boolean>(false);
 
   // Load recent documents from database
   const loadRecentDocuments = useCallback(async () => {
@@ -204,29 +205,29 @@ export const InitialDocumentScreen: React.FC = () => {
     const e = (ext || '').toLowerCase();
     switch (e) {
       case 'pdf':
-        return { icon: '📕', label: 'PDF', color: '#EF4444', bg: '#FEE2E2' };
+        return { icon: '📕', label: 'PDF', color: '#EF4444', bg: isDark ? '#450A0A' : '#FEE2E2' };
       case 'doc':
       case 'docx':
-        return { icon: '📘', label: 'DOC', color: '#3B82F6', bg: '#DBEAFE' };
+        return { icon: '📘', label: 'DOC', color: '#3B82F6', bg: isDark ? '#172554' : '#DBEAFE' };
       case 'xls':
       case 'xlsx':
-        return { icon: '📊', label: 'XLS', color: '#10B981', bg: '#D1FAE5' };
+        return { icon: '📊', label: 'XLS', color: '#10B981', bg: isDark ? '#064E3B' : '#D1FAE5' };
       case 'ppt':
       case 'pptx':
-        return { icon: '📙', label: 'PPT', color: '#F97316', bg: '#FFEDD5' };
+        return { icon: '📙', label: 'PPT', color: '#F97316', bg: isDark ? '#431407' : '#FFEDD5' };
       case 'txt':
       case 'text':
-        return { icon: '📝', label: 'TXT', color: '#64748B', bg: '#F1F5F9' };
+        return { icon: '📝', label: 'TXT', color: themeColors.textSecondary, bg: themeColors.cardSecondary };
       case 'csv':
-        return { icon: '📈', label: 'CSV', color: '#06B6D4', bg: '#CFFAFE' };
+        return { icon: '📈', label: 'CSV', color: '#06B6D4', bg: isDark ? '#083344' : '#CFFAFE' };
       case 'md':
-        return { icon: '📑', label: 'MD', color: '#8B5CF6', bg: '#EDE9FE' };
+        return { icon: '📑', label: 'MD', color: '#8B5CF6', bg: isDark ? '#2E1065' : '#EDE9FE' };
       default:
         return {
           icon: '📄',
           label: (ext || 'FILE').toUpperCase().slice(0, 4),
-          color: '#64748B',
-          bg: '#F1F5F9',
+          color: themeColors.textSecondary,
+          bg: themeColors.cardSecondary,
         };
     }
   };
@@ -234,9 +235,25 @@ export const InitialDocumentScreen: React.FC = () => {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
       {/* Top App Bar */}
-      <View style={[styles.appBar, { borderBottomColor: themeColors.border }]}>
+      <View
+        style={[
+          styles.appBar,
+          {
+            backgroundColor: themeColors.surface,
+            borderBottomColor: themeColors.border,
+          },
+        ]}
+      >
         <View style={styles.brandContainer}>
-          <View style={styles.logoBadge}>
+          <View
+            style={[
+              styles.logoBadge,
+              {
+                backgroundColor: themeColors.badgeBg,
+                borderColor: themeColors.border,
+              },
+            ]}
+          >
             <Text style={styles.logoBadgeEmoji}>📑</Text>
           </View>
           <View>
@@ -251,16 +268,29 @@ export const InitialDocumentScreen: React.FC = () => {
         </View>
 
         <View style={styles.headerActions}>
+          {/* Theme Quick Toggle */}
           <TouchableOpacity
-            style={[styles.headerIconButton, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}
+            style={[styles.headerIconButton, { backgroundColor: themeColors.cardSecondary }]}
+            onPress={() => setIsThemeModalVisible(true)}
+            activeOpacity={0.7}
+            accessibilityLabel="Switch Theme"
+          >
+            <Text style={styles.headerIconEmoji}>🎨</Text>
+          </TouchableOpacity>
+
+          {/* Search Shortcut */}
+          <TouchableOpacity
+            style={[styles.headerIconButton, { backgroundColor: themeColors.cardSecondary }]}
             onPress={() => navigation.navigate('MainTabs', { screen: 'SearchTab' })}
             activeOpacity={0.7}
             accessibilityLabel="Search Documents"
           >
             <Text style={styles.headerIconEmoji}>🔍</Text>
           </TouchableOpacity>
+
+          {/* Secure Vault */}
           <TouchableOpacity
-            style={[styles.headerIconButton, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}
+            style={[styles.headerIconButton, { backgroundColor: themeColors.cardSecondary }]}
             onPress={() => navigation.navigate('MainTabs', { screen: 'SecurityTab' })}
             activeOpacity={0.7}
             accessibilityLabel="Secure Vault"
@@ -283,18 +313,36 @@ export const InitialDocumentScreen: React.FC = () => {
       >
         {/* State A: External File Ready (via Intent or Picker) */}
         {resolvedDoc && (
-          <View style={[styles.incomingCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: '#3B82F6' }]}>
+          <View
+            style={[
+              styles.incomingCard,
+              {
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.primary,
+              },
+            ]}
+          >
             <View style={styles.incomingHeader}>
-              <View style={styles.incomingPill}>
-                <Text style={styles.incomingPillText}>Ready to Open</Text>
+              <View style={[styles.incomingPill, { backgroundColor: themeColors.badgeBg }]}>
+                <Text style={[styles.incomingPillText, { color: themeColors.primary }]}>
+                  Ready to Open
+                </Text>
               </View>
-              <TouchableOpacity onPress={handleClearSelection} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={styles.closeEmoji}>✕</Text>
+              <TouchableOpacity
+                onPress={handleClearSelection}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={[styles.closeEmoji, { color: themeColors.textMuted }]}>✕</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.incomingBody}>
-              <View style={[styles.incomingIconBox, { backgroundColor: getFormatBadge(resolvedDoc.document.extension).bg }]}>
+              <View
+                style={[
+                  styles.incomingIconBox,
+                  { backgroundColor: getFormatBadge(resolvedDoc.document.extension).bg },
+                ]}
+              >
                 <Text style={styles.incomingDocEmoji}>
                   {getFormatBadge(resolvedDoc.document.extension).icon}
                 </Text>
@@ -308,15 +356,27 @@ export const InitialDocumentScreen: React.FC = () => {
                   {resolvedDoc.document.name}
                 </Text>
                 <View style={styles.incomingMetaRow}>
-                  <Text style={styles.formatChip}>
+                  <Text
+                    style={[
+                      styles.formatChip,
+                      {
+                        color: themeColors.primary,
+                        backgroundColor: themeColors.badgeBg,
+                      },
+                    ]}
+                  >
                     {getFormatBadge(resolvedDoc.document.extension).label}
                   </Text>
                   {resolvedDoc.document.size !== undefined && (
-                    <Text style={[styles.incomingMetaText, { color: themeColors.textSecondary }]}>
+                    <Text
+                      style={[styles.incomingMetaText, { color: themeColors.textSecondary }]}
+                    >
                       • {formatFileSize(resolvedDoc.document.size)}
                     </Text>
                   )}
-                  <Text style={[styles.incomingMetaText, { color: themeColors.textSecondary }]}>
+                  <Text
+                    style={[styles.incomingMetaText, { color: themeColors.textSecondary }]}
+                  >
                     • External
                   </Text>
                 </View>
@@ -325,7 +385,7 @@ export const InitialDocumentScreen: React.FC = () => {
 
             <View style={styles.incomingActions}>
               <TouchableOpacity
-                style={styles.primaryActionButton}
+                style={[styles.primaryActionButton, { backgroundColor: themeColors.primary }]}
                 onPress={handleOpenDocument}
                 activeOpacity={0.8}
               >
@@ -334,7 +394,13 @@ export const InitialDocumentScreen: React.FC = () => {
 
               {isEditable(resolvedDoc.document.extension) && (
                 <TouchableOpacity
-                  style={[styles.secondaryActionButton, { borderColor: themeColors.border }]}
+                  style={[
+                    styles.secondaryActionButton,
+                    {
+                      borderColor: themeColors.border,
+                      backgroundColor: themeColors.cardSecondary,
+                    },
+                  ]}
                   onPress={handleEditDocument}
                   activeOpacity={0.8}
                 >
@@ -349,7 +415,13 @@ export const InitialDocumentScreen: React.FC = () => {
 
         {/* Quick Search Shortcut Bar */}
         <TouchableOpacity
-          style={[styles.searchBarShortcut, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: themeColors.border }]}
+          style={[
+            styles.searchBarShortcut,
+            {
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            },
+          ]}
           onPress={() => navigation.navigate('MainTabs', { screen: 'SearchTab' })}
           activeOpacity={0.8}
         >
@@ -369,11 +441,17 @@ export const InitialDocumentScreen: React.FC = () => {
         <View style={styles.quickGrid}>
           {/* Action 1: Browse Storage */}
           <TouchableOpacity
-            style={[styles.gridCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: themeColors.border }]}
+            style={[
+              styles.gridCard,
+              {
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              },
+            ]}
             onPress={() => navigation.navigate('FileBrowser')}
             activeOpacity={0.7}
           >
-            <View style={[styles.actionIconContainer, { backgroundColor: '#EFF6FF' }]}>
+            <View style={[styles.actionIconContainer, { backgroundColor: isDark ? '#172554' : '#EFF6FF' }]}>
               <Text style={styles.actionIcon}>📁</Text>
             </View>
             <Text style={[styles.gridTitle, { color: themeColors.textPrimary }]}>
@@ -386,12 +464,18 @@ export const InitialDocumentScreen: React.FC = () => {
 
           {/* Action 2: Open File */}
           <TouchableOpacity
-            style={[styles.gridCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: themeColors.border }]}
+            style={[
+              styles.gridCard,
+              {
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              },
+            ]}
             onPress={handlePickDocument}
             disabled={isPicking}
             activeOpacity={0.7}
           >
-            <View style={[styles.actionIconContainer, { backgroundColor: '#F0FDF4' }]}>
+            <View style={[styles.actionIconContainer, { backgroundColor: isDark ? '#064E3B' : '#F0FDF4' }]}>
               {isPicking ? (
                 <ActivityIndicator size="small" color="#10B981" />
               ) : (
@@ -408,11 +492,17 @@ export const InitialDocumentScreen: React.FC = () => {
 
           {/* Action 3: Scan Document */}
           <TouchableOpacity
-            style={[styles.gridCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: themeColors.border }]}
+            style={[
+              styles.gridCard,
+              {
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              },
+            ]}
             onPress={() => navigation.navigate('MainTabs', { screen: 'ScannerTab' })}
             activeOpacity={0.7}
           >
-            <View style={[styles.actionIconContainer, { backgroundColor: '#FEF3C7' }]}>
+            <View style={[styles.actionIconContainer, { backgroundColor: isDark ? '#451A03' : '#FEF3C7' }]}>
               <Text style={styles.actionIcon}>📷</Text>
             </View>
             <Text style={[styles.gridTitle, { color: themeColors.textPrimary }]}>
@@ -425,11 +515,17 @@ export const InitialDocumentScreen: React.FC = () => {
 
           {/* Action 4: Create Note */}
           <TouchableOpacity
-            style={[styles.gridCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: themeColors.border }]}
+            style={[
+              styles.gridCard,
+              {
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              },
+            ]}
             onPress={() => navigation.navigate('Editor', { title: 'New Document' })}
             activeOpacity={0.7}
           >
-            <View style={[styles.actionIconContainer, { backgroundColor: '#F3E8FF' }]}>
+            <View style={[styles.actionIconContainer, { backgroundColor: isDark ? '#2E1065' : '#F3E8FF' }]}>
               <Text style={styles.actionIcon}>📝</Text>
             </View>
             <Text style={[styles.gridTitle, { color: themeColors.textPrimary }]}>
@@ -455,7 +551,13 @@ export const InitialDocumentScreen: React.FC = () => {
         >
           {/* Downloads */}
           <TouchableOpacity
-            style={[styles.shortcutChip, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: themeColors.border }]}
+            style={[
+              styles.shortcutChip,
+              {
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              },
+            ]}
             onPress={() =>
               navigation.navigate('FileBrowser', {
                 initialLocation: {
@@ -475,7 +577,13 @@ export const InitialDocumentScreen: React.FC = () => {
 
           {/* Documents */}
           <TouchableOpacity
-            style={[styles.shortcutChip, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: themeColors.border }]}
+            style={[
+              styles.shortcutChip,
+              {
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              },
+            ]}
             onPress={() =>
               navigation.navigate('FileBrowser', {
                 initialLocation: {
@@ -495,7 +603,13 @@ export const InitialDocumentScreen: React.FC = () => {
 
           {/* Secure Vault */}
           <TouchableOpacity
-            style={[styles.shortcutChip, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: themeColors.border }]}
+            style={[
+              styles.shortcutChip,
+              {
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              },
+            ]}
             onPress={() => navigation.navigate('MainTabs', { screen: 'SecurityTab' })}
             activeOpacity={0.7}
           >
@@ -507,7 +621,13 @@ export const InitialDocumentScreen: React.FC = () => {
 
           {/* All Library */}
           <TouchableOpacity
-            style={[styles.shortcutChip, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: themeColors.border }]}
+            style={[
+              styles.shortcutChip,
+              {
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              },
+            ]}
             onPress={() => navigation.navigate('MainTabs', { screen: 'DocumentsTab' })}
             activeOpacity={0.7}
           >
@@ -534,7 +654,15 @@ export const InitialDocumentScreen: React.FC = () => {
         </View>
 
         {recentDocs.length > 0 ? (
-          <View style={[styles.recentListCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: themeColors.border }]}>
+          <View
+            style={[
+              styles.recentListCard,
+              {
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              },
+            ]}
+          >
             {recentDocs.map((item, index) => {
               const badge = getFormatBadge(item.extension);
               const isLast = index === recentDocs.length - 1;
@@ -580,7 +708,15 @@ export const InitialDocumentScreen: React.FC = () => {
             })}
           </View>
         ) : (
-          <View style={[styles.emptyRecentCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: themeColors.border }]}>
+          <View
+            style={[
+              styles.emptyRecentCard,
+              {
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.border,
+              },
+            ]}
+          >
             <Text style={styles.emptyRecentEmoji}>📂</Text>
             <Text style={[styles.emptyRecentTitle, { color: themeColors.textPrimary }]}>
               No recent documents yet
@@ -589,25 +725,46 @@ export const InitialDocumentScreen: React.FC = () => {
               Documents you open, scan, or create will appear here for fast offline access.
             </Text>
             <TouchableOpacity
-              style={styles.emptyBrowseButton}
+              style={[
+                styles.emptyBrowseButton,
+                {
+                  backgroundColor: themeColors.cardSecondary,
+                  borderColor: themeColors.border,
+                },
+              ]}
               onPress={() => navigation.navigate('FileBrowser')}
               activeOpacity={0.8}
             >
-              <Text style={styles.emptyBrowseButtonText}>Open File Browser</Text>
+              <Text style={[styles.emptyBrowseButtonText, { color: themeColors.primary }]}>
+                Open File Browser
+              </Text>
             </TouchableOpacity>
           </View>
         )}
 
         {/* Supported Formats Banner */}
-        <View style={[styles.formatsCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: themeColors.border }]}>
-          <Text style={styles.formatsTitle}>SUPPORTED FORMATS</Text>
+        <View
+          style={[
+            styles.formatsCard,
+            {
+              backgroundColor: themeColors.card,
+              borderColor: themeColors.border,
+            },
+          ]}
+        >
+          <Text style={[styles.formatsTitle, { color: themeColors.textMuted }]}>
+            SUPPORTED FORMATS
+          </Text>
           <View style={styles.formatPillsRow}>
             {['PDF', 'DOCX', 'XLSX', 'PPTX', 'TXT', 'CSV', 'MD'].map((fmt) => (
               <View
                 key={fmt}
                 style={[
                   styles.formatPill,
-                  { backgroundColor: isDark ? '#0F172A' : '#F1F5F9', borderColor: themeColors.border },
+                  {
+                    backgroundColor: themeColors.cardSecondary,
+                    borderColor: themeColors.border,
+                  },
                 ]}
               >
                 <Text style={[styles.formatPillText, { color: themeColors.textPrimary }]}>
@@ -620,14 +777,24 @@ export const InitialDocumentScreen: React.FC = () => {
       </ScrollView>
 
       {/* Floating Bottom Quick Dock */}
-      <View style={[styles.bottomDock, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderTopColor: themeColors.border }]}>
+      <View
+        style={[
+          styles.bottomDock,
+          {
+            backgroundColor: themeColors.surface,
+            borderTopColor: themeColors.border,
+          },
+        ]}
+      >
         <TouchableOpacity
           style={styles.dockItem}
           onPress={() => {}}
           activeOpacity={0.7}
         >
           <Text style={styles.dockActiveEmoji}>🏠</Text>
-          <Text style={[styles.dockLabel, styles.dockActiveLabel]}>Home</Text>
+          <Text style={[styles.dockLabel, { color: themeColors.primary, fontWeight: '700' }]}>
+            Home
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -666,6 +833,81 @@ export const InitialDocumentScreen: React.FC = () => {
           <Text style={[styles.dockLabel, { color: themeColors.textSecondary }]}>Vault</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Theme Selection Modal */}
+      <Modal
+        visible={isThemeModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsThemeModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsThemeModalVisible(false)}
+        >
+          <View
+            style={[
+              styles.themeModalContent,
+              {
+                backgroundColor: themeColors.surface,
+                borderColor: themeColors.border,
+              },
+            ]}
+            onStartShouldSetResponder={() => true}
+          >
+            <Text style={[styles.modalThemeTitle, { color: themeColors.textPrimary }]}>
+              Choose Display Theme
+            </Text>
+            <Text style={[styles.modalThemeSub, { color: themeColors.textSecondary }]}>
+              Select your color palette for both light, dark, and specialized reading modes.
+            </Text>
+
+            <View style={styles.themeModalGrid}>
+              {THEME_OPTIONS.map((opt) => {
+                const isSelected = themeMode === opt.id;
+                return (
+                  <TouchableOpacity
+                    key={opt.id}
+                    style={[
+                      styles.themeModalCard,
+                      {
+                        backgroundColor: isSelected ? themeColors.cardSecondary : themeColors.card,
+                        borderColor: isSelected ? themeColors.primary : themeColors.border,
+                      },
+                    ]}
+                    onPress={() => {
+                      setThemeMode(opt.id);
+                      setIsThemeModalVisible(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.themeColorDotRow}>
+                      <View style={[styles.themeDot, { backgroundColor: opt.colorPreview }]} />
+                      {isSelected && (
+                        <Text style={[styles.themeSelectedCheck, { color: themeColors.primary }]}>
+                          ✓
+                        </Text>
+                      )}
+                    </View>
+                    <Text
+                      style={[
+                        styles.themeModalName,
+                        {
+                          color: isSelected ? themeColors.primary : themeColors.textPrimary,
+                          fontWeight: isSelected ? '700' : '500',
+                        },
+                      ]}
+                    >
+                      {opt.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -691,11 +933,9 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 12,
-    backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
   },
   logoBadgeEmoji: {
     fontSize: 22,
@@ -769,9 +1009,9 @@ const styles = StyleSheet.create({
     padding: 18,
     borderWidth: 1.5,
     marginBottom: 20,
-    shadowColor: '#2563EB',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
   },
@@ -782,7 +1022,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   incomingPill: {
-    backgroundColor: '#DBEAFE',
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 12,
@@ -790,12 +1029,10 @@ const styles = StyleSheet.create({
   incomingPillText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#2563EB',
     textTransform: 'uppercase',
   },
   closeEmoji: {
     fontSize: 16,
-    color: '#94A3B8',
     fontWeight: 'bold',
   },
   incomingBody: {
@@ -830,8 +1067,6 @@ const styles = StyleSheet.create({
   formatChip: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#2563EB',
-    backgroundColor: '#EFF6FF',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -845,7 +1080,6 @@ const styles = StyleSheet.create({
   },
   primaryActionButton: {
     flex: 1,
-    backgroundColor: '#2563EB',
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
@@ -1024,17 +1258,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   emptyBrowseButton: {
-    backgroundColor: '#EFF6FF',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
   },
   emptyBrowseButtonText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#2563EB',
   },
   formatsCard: {
     borderRadius: 16,
@@ -1046,7 +1277,6 @@ const styles = StyleSheet.create({
   formatsTitle: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#94A3B8',
     letterSpacing: 0.8,
     marginBottom: 10,
   },
@@ -1092,9 +1322,63 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
   },
-  dockActiveLabel: {
-    color: '#2563EB',
-    fontWeight: '700',
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  themeModalContent: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 18,
+    padding: 20,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  modalThemeTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  modalThemeSub: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 16,
+  },
+  themeModalGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  themeModalCard: {
+    width: '48%',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1.5,
+  },
+  themeColorDotRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  themeDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+  },
+  themeSelectedCheck: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  themeModalName: {
+    fontSize: 12,
   },
 });
 

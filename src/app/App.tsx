@@ -6,21 +6,24 @@ import { useAppTheme } from '../shared/hooks';
 import { incomingFileService } from '../core/intents/incomingFileService';
 import { navigate } from './navigation/navigationRef';
 
-export const App: React.FC = () => {
-  const { isDark } = useAppTheme();
+const AppContent: React.FC = () => {
+  const { themeColors } = useAppTheme();
 
   useEffect(() => {
     // Initialize incoming file service to handle incoming launch intents
-    incomingFileService.initialize().then((initialDoc) => {
-      if (initialDoc && !initialDoc.isSupported) {
-        navigate('UnsupportedDocument', {
-          document: initialDoc.document,
-          reason: `UniversalDocs does not support the .${initialDoc.document.extension} format yet.`,
-        });
-      }
-    }).catch((err) => {
-      console.warn('App: Failed to initialize incomingFileService:', err);
-    });
+    incomingFileService
+      .initialize()
+      .then((initialDoc) => {
+        if (initialDoc && !initialDoc.isSupported) {
+          navigate('UnsupportedDocument', {
+            document: initialDoc.document,
+            reason: `UniversalDocs does not support the .${initialDoc.document.extension} format yet.`,
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn('App: Failed to initialize incomingFileService:', err);
+      });
 
     // Subscribe to new incoming files while app is active
     const unsubscribe = incomingFileService.subscribe((doc) => {
@@ -28,7 +31,6 @@ export const App: React.FC = () => {
       if (!doc.isSupported) {
         navigate('UnsupportedDocument', {
           document: doc.document,
-          
           reason: `UniversalDocs does not support the .${doc.document.extension} format yet.`,
         });
       } else {
@@ -43,9 +45,17 @@ export const App: React.FC = () => {
   }, []);
 
   return (
-    <AppProvider>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+    <>
+      <StatusBar barStyle={themeColors.statusBar} />
       <RootNavigator />
+    </>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <AppProvider>
+      <AppContent />
     </AppProvider>
   );
 };

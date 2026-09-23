@@ -1,14 +1,26 @@
 import React from 'react';
 import { View, StyleSheet, ViewProps } from 'react-native';
-import { colors } from '../theme';
+import { useAppTheme } from '../hooks';
 
 export interface CardProps extends ViewProps {
   children?: React.ReactNode;
 }
 
 export const Card: React.FC<CardProps> = ({ children, style, ...props }) => {
+  const { themeColors } = useAppTheme();
+
   return (
-    <View style={[styles.card, style]} {...props}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: themeColors.card,
+          borderColor: themeColors.border,
+        },
+        style,
+      ]}
+      {...props}
+    >
       {children}
     </View>
   );
@@ -16,11 +28,9 @@ export const Card: React.FC<CardProps> = ({ children, style, ...props }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.border,
   },
 });
 
