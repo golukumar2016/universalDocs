@@ -10,15 +10,22 @@ import {
 } from '../../features/documents';
 import { EditorScreen } from '../../features/editor';
 import { MainNavigator } from './MainNavigator';
+import { useAppTheme } from '../../shared/hooks';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const RootNavigator: React.FC = () => {
+  const { themeColors } = useAppTheme();
+
   return (
     <Stack.Navigator
       initialRouteName="InitialDocument"
       screenOptions={{
         headerShown: false,
+        contentStyle: { backgroundColor: themeColors.background },
+        navigationBarColor: themeColors.surface,
+        statusBarStyle: themeColors.statusBar === 'light-content' ? 'light' : 'dark',
+        animation: 'slide_from_right',
       }}
     >
       <Stack.Screen
