@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, Platform } from 'react-native';
 import {
   ThemeColors,
   lightColors,
@@ -11,6 +11,7 @@ import {
   colors,
 } from './palettes';
 import { localStorage } from '../../core/storage/localStorage';
+import { setAndroidSystemBarsTheme } from './androidNavigationBar';
 
 export type ThemeMode = 'system' | 'light' | 'dark' | 'midnight' | 'sepia' | 'ocean';
 
@@ -89,6 +90,22 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     return allThemes[themeMode] || (systemScheme === 'dark' ? darkColors : lightColors);
   }, [themeMode, systemScheme]);
+
+  // Synchronize Android system navigation bar & status bar buttons with active theme mode
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      const isLightNavBar = !activeColors.isDark;
+      const isLightStatusBar = activeColors.statusBar === 'dark-content';
+      setAndroidSystemBarsTheme({
+        statusBarColor: activeColors.background,
+        isLightStatusBar,
+        navigationBarColor: activeColors.surface,
+        isLightNavigationBar: isLightNavBar,
+      }).catch((e) => {
+        console.warn('ThemeContext: Failed to update Android system bars:', e);
+      });
+    }
+  }, [activeColors]);
 
   const value = useMemo(
     () => ({

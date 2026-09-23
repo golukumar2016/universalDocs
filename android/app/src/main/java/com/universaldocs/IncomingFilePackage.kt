@@ -9,7 +9,10 @@ import com.facebook.react.uimanager.ViewManager
 
 class IncomingFilePackage : ReactPackage {
     override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
-        return listOf(IncomingFileModule(reactContext))
+        return listOf(
+            IncomingFileModule(reactContext),
+            AndroidNavigationBarModule(reactContext)
+        )
     }
 
     override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<View, ReactShadowNode<*>>> {

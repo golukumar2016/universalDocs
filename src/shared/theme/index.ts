@@ -30,4 +30,5 @@ export const theme = {
 
 export * from './palettes';
 export * from './ThemeContext';
+export * from './androidNavigationBar';
 export default theme;

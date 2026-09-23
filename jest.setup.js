@@ -37,3 +37,10 @@ jest.mock('react-native-biometrics', () => {
     simplePrompt: jest.fn().mockResolvedValue({ success: false }),
   }));
 });
+
+const { NativeModules } = require('react-native');
+NativeModules.AndroidNavigationBarModule = {
+  setNavigationBarTheme: jest.fn().mockResolvedValue(true),
+  setSystemBarsTheme: jest.fn().mockResolvedValue(true),
+};
+
