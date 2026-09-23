@@ -10,7 +10,7 @@ import {
   BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useFileBrowser } from '../hooks/useFileBrowser';
 import { FileList } from '../components/FileList';
 import { BrowserItem, SortOption, SortDirection } from '../services/fileBrowserService';
@@ -18,6 +18,7 @@ import { DocumentResolver } from '../../../core/documents/documentResolver';
 
 export const FileBrowserScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
 
   const {
     currentLocation,
@@ -40,7 +41,7 @@ export const FileBrowserScreen: React.FC = () => {
     navigateToBreadcrumb,
     pickAndOpenFolder,
     setLocation,
-  } = useFileBrowser();
+  } = useFileBrowser({ initialLocation: route.params?.initialLocation });
 
   const [isSortModalVisible, setIsSortModalVisible] = useState<boolean>(false);
   const [isLocationsModalVisible, setIsLocationsModalVisible] = useState<boolean>(false);
