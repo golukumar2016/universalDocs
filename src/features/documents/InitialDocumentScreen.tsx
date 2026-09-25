@@ -17,6 +17,8 @@ import { incomingFileService } from '../../core/intents/incomingFileService';
 import { ResolvedDocument } from '../../core/documents/documentResolver';
 import { DocumentRepository } from '../../core/database/repositories/documentRepository';
 import { RecentRepository } from '../../core/database/repositories/recentRepository';
+import { FavoriteRepository } from '../../core/database/repositories/favoriteRepository';
+import { EditorRouter } from '../editor/services/editorRouter';
 import { FileBrowserService } from './services/fileBrowserService';
 import { Document, DocumentItem } from '../../shared/types';
 import { formatFileSize, formatDate } from '../../shared/utils';
@@ -34,19 +36,25 @@ export const InitialDocumentScreen: React.FC = () => {
   const [defaultDirs, setDefaultDirs] = useState<{ download?: string; documents?: string }>({});
   const [isThemeModalVisible, setIsThemeModalVisible] = useState<boolean>(false);
 
-  // Load recent documents from database
+  // Load real recent documents from database
   const loadRecentDocuments = useCallback(async () => {
     try {
       const recents = await RecentRepository.getRecentDocuments(6);
-      if (recents && recents.length > 0) {
-        setRecentDocs(recents);
-      } else {
-        const fallbackDocs = await DocumentRepository.findByFolder(null);
-        setRecentDocs(fallbackDocs.slice(0, 6));
-      }
+      setRecentDocs(recents || []);
     } catch {
-      // In initial mock / empty DB environment, fallback gracefully
       setRecentDocs([]);
+    }
+  }, []);
+
+  // Toggle document favorite status persistently
+  const handleToggleFavorite = useCallback(async (item: DocumentItem) => {
+    try {
+      const isFav = await FavoriteRepository.toggleFavorite(item.id);
+      setRecentDocs((prev) =>
+        prev.map((d) => (d.id === item.id ? { ...d, isFavorite: isFav } : d))
+      );
+    } catch (error) {
+      console.warn('Failed to toggle favorite:', error);
     }
   }, []);
 
@@ -125,14 +133,8 @@ export const InitialDocumentScreen: React.FC = () => {
           file.type ?? undefined
         );
 
-        if (!doc.isSupported) {
-          navigation.navigate('UnsupportedDocument', {
-            document: doc.document,
-            reason: `UniversalDocs does not support the .${doc.document.extension} format yet.`,
-          });
-        } else {
-          setResolvedDoc(doc);
-        }
+        await EditorRouter.openDocument(navigation, doc.document);
+        loadRecentDocuments();
       }
     } catch (error: any) {
       if (
@@ -150,9 +152,7 @@ export const InitialDocumentScreen: React.FC = () => {
   // Open the resolved incoming file
   const handleOpenDocument = () => {
     if (!resolvedDoc) return;
-    navigation.navigate('DocumentViewer', {
-      document: resolvedDoc.document,
-    });
+    EditorRouter.openDocument(navigation, resolvedDoc.document);
   };
 
   // Check if file is editable as text
@@ -164,11 +164,7 @@ export const InitialDocumentScreen: React.FC = () => {
   // Open text file in Editor
   const handleEditDocument = () => {
     if (!resolvedDoc) return;
-    navigation.navigate('Editor', {
-      filePath: resolvedDoc.document.uri,
-      title: resolvedDoc.document.name,
-      document: resolvedDoc.document,
-    });
+    EditorRouter.openDocument(navigation, resolvedDoc.document);
   };
 
   const handleClearSelection = () => {
@@ -178,26 +174,7 @@ export const InitialDocumentScreen: React.FC = () => {
 
   // Open recent document
   const handleOpenRecent = (item: DocumentItem) => {
-    const doc: Document = {
-      id: item.id,
-      name: item.name,
-      uri: item.uri || `file://${item.path}`,
-      mimeType: item.mimeType,
-      extension: item.extension,
-      size: item.size,
-      createdAt: item.createdAt,
-      modifiedAt: item.updatedAt,
-    };
-
-    if (isEditable(item.extension)) {
-      navigation.navigate('Editor', {
-        filePath: item.path,
-        title: item.name,
-        document: doc,
-      });
-    } else {
-      navigation.navigate('DocumentViewer', { document: doc });
-    }
+    EditorRouter.openDocument(navigation, item);
   };
 
   // Format badge helper
@@ -699,6 +676,16 @@ export const InitialDocumentScreen: React.FC = () => {
                       </Text>
                     </View>
                   </View>
+
+                  <TouchableOpacity
+                    onPress={() => handleToggleFavorite(item)}
+                    style={styles.favoriteButton}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={styles.favoriteIconText}>
+                      {item.isFavorite ? '⭐' : '☆'}
+                    </Text>
+                  </TouchableOpacity>
 
                   <Text style={[styles.chevronArrow, { color: themeColors.textSecondary }]}>
                     ›
@@ -1224,6 +1211,14 @@ const styles = StyleSheet.create({
   },
   recentItemDate: {
     fontSize: 12,
+  },
+  favoriteButton: {
+    padding: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  favoriteIconText: {
+    fontSize: 16,
   },
   chevronArrow: {
     fontSize: 18,

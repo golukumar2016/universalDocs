@@ -140,6 +140,26 @@ class IncomingFileModule(private val reactContext: ReactApplicationContext) :
     }
 
     /**
+     * Attempts to take persistable read and write URI permissions for SAF content URIs.
+     */
+    @ReactMethod
+    fun takePersistableUriPermission(uriString: String, promise: Promise) {
+        try {
+            val uri = Uri.parse(uriString)
+            if (ContentResolver.SCHEME_CONTENT.equals(uri.scheme, ignoreCase = true)) {
+                val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                reactContext.contentResolver.takePersistableUriPermission(uri, flags)
+                promise.resolve(true)
+            } else {
+                promise.resolve(false)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not take persistable URI permission: ${e.message}")
+            promise.resolve(false)
+        }
+    }
+
+    /**
      * Checks if the app has external storage / all files access.
      */
     @ReactMethod
@@ -379,6 +399,17 @@ class IncomingFileModule(private val reactContext: ReactApplicationContext) :
 
         if (uri == null) {
             return null
+        }
+
+        if (ContentResolver.SCHEME_CONTENT.equals(uri.scheme, ignoreCase = true)) {
+            try {
+                val takeFlags = intent.flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                if (takeFlags != 0) {
+                    reactContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
+                }
+            } catch (_: Exception) {
+                // Ignore if provider doesn't support persistable permissions
+            }
         }
 
         return resolveUriMetadata(uri, intent.type, action)

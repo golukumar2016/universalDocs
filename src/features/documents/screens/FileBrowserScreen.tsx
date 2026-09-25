@@ -15,6 +15,7 @@ import { useFileBrowser } from '../hooks/useFileBrowser';
 import { FileList } from '../components/FileList';
 import { BrowserItem, SortOption, SortDirection } from '../services/fileBrowserService';
 import { DocumentResolver } from '../../../core/documents/documentResolver';
+import { EditorRouter } from '../../editor/services/editorRouter';
 import { useAppTheme } from '../../../shared/hooks';
 
 export const FileBrowserScreen: React.FC = () => {
@@ -49,7 +50,7 @@ export const FileBrowserScreen: React.FC = () => {
   const [isLocationsModalVisible, setIsLocationsModalVisible] = useState<boolean>(false);
 
   // Handle opening a file
-  const handleFilePress = (file: BrowserItem) => {
+  const handleFilePress = async (file: BrowserItem) => {
     try {
       const resolved = DocumentResolver.resolveDocument({
         uri: file.uri,
@@ -58,16 +59,7 @@ export const FileBrowserScreen: React.FC = () => {
         size: file.size,
       });
 
-      if (!resolved.isSupported) {
-        navigation.navigate('UnsupportedDocument', {
-          document: resolved.document,
-          reason: `UniversalDocs does not support the .${resolved.document.extension} format yet.`,
-        });
-      } else {
-        navigation.navigate('DocumentViewer', {
-          document: resolved.document,
-        });
-      }
+      await EditorRouter.openDocument(navigation, resolved.document);
     } catch (err: any) {
       console.warn('FileBrowserScreen: Error opening file:', err);
     }

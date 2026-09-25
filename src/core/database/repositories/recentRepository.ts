@@ -38,25 +38,22 @@ export class RecentRepository {
       const items: DocumentItem[] = [];
       for (let i = 0; i < results.rows.length; i++) {
         const row = results.rows.item(i);
-        items.push({
-          id: row.id,
-          name: row.name,
-          uri: row.uri,
-          path: row.path,
-          size: row.size,
-          mimeType: row.mimeType,
-          extension: row.extension,
-          folderId: row.folderId,
-          createdAt: row.createdAt,
-          updatedAt: row.updatedAt,
-          lastOpenedAt: row.lastOpenedAt,
-          isFavorite: Boolean(row.isFavorite),
-          isSecured: Boolean(row.isSecured),
-        });
+        items.push(this.mapRowToDocument(row));
       }
+
       return items;
     } catch (error) {
       throw new DatabaseError('Failed to fetch recent documents', error);
+    }
+  }
+
+  static async removeRecent(documentId: string): Promise<void> {
+    try {
+      const db = await AppDatabase.getDatabase();
+      await db.executeSql('DELETE FROM recent WHERE documentId = ?;', [documentId]);
+      await db.executeSql('UPDATE documents SET lastOpenedAt = NULL WHERE id = ?;', [documentId]);
+    } catch (error) {
+      throw new DatabaseError(`Failed to remove recent item for document ${documentId}`, error);
     }
   }
 
@@ -64,9 +61,28 @@ export class RecentRepository {
     try {
       const db = await AppDatabase.getDatabase();
       await db.executeSql('DELETE FROM recent;');
+      await db.executeSql('UPDATE documents SET lastOpenedAt = NULL;');
     } catch (error) {
       throw new DatabaseError('Failed to clear recent list', error);
     }
+  }
+
+  private static mapRowToDocument(row: any): DocumentItem {
+    return {
+      id: row.id,
+      name: row.name,
+      uri: row.uri,
+      path: row.path,
+      size: row.size,
+      mimeType: row.mimeType,
+      extension: row.extension,
+      folderId: row.folderId,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      lastOpenedAt: row.lastOpenedAt,
+      isFavorite: Boolean(row.isFavorite),
+      isSecured: Boolean(row.isSecured),
+    };
   }
 }
 

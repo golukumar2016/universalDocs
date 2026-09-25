@@ -11,8 +11,18 @@ export const FILE_PATHS = {
 
 export class FileSystem {
   static async exists(path: string): Promise<boolean> {
+    if (!path) return false;
+    if (path.startsWith('content://')) {
+      try {
+        const stats = await RNFS.stat(path);
+        return Boolean(stats);
+      } catch {
+        return true;
+      }
+    }
     try {
-      return await RNFS.exists(path);
+      const cleanPath = path.startsWith('file://') ? path.replace('file://', '') : path;
+      return await RNFS.exists(cleanPath);
     } catch (error) {
       throw new FileSystemError(`Error checking file existence at ${path}`, error);
     }
@@ -20,7 +30,8 @@ export class FileSystem {
 
   static async stat(path: string): Promise<RNFS.StatResult> {
     try {
-      return await RNFS.stat(path);
+      const cleanPath = path.startsWith('file://') ? path.replace('file://', '') : path;
+      return await RNFS.stat(cleanPath);
     } catch (error) {
       throw new FileSystemError(`Error getting file stats at ${path}`, error);
     }
