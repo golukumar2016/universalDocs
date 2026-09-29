@@ -26,6 +26,7 @@ const AppContent: React.FC = () => {
       });
 
     // Subscribe to new incoming files while app is active
+    
     const unsubscribe = incomingFileService.subscribe((doc) => {
       if (!doc) return;
       if (!doc.isSupported) {
