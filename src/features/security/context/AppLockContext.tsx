@@ -9,7 +9,7 @@ import React, {
 import { AppState, AppStateStatus } from 'react-native';
 import { AuthService } from '../services/authService';
 import { VaultService } from '../services/vaultService';
-import { LockTimeoutOption } from '../vault.types';
+import { LockTimeoutOption, SecuritySettingsState } from '../vault.types';
 
 export interface AppLockContextType {
   isLocked: boolean;
@@ -29,7 +29,7 @@ export interface AppLockContextType {
     attemptsLeft?: number;
   }>;
   triggerBiometrics: () => Promise<boolean>;
-  refreshSecurityState: () => Promise<void>;
+  refreshSecurityState: () => Promise<SecuritySettingsState | null>;
 }
 
 const AppLockContext = createContext<AppLockContextType | undefined>(undefined);
@@ -45,7 +45,7 @@ export const AppLockProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
 
   const backgroundTimeRef = useRef<number | null>(null);
-  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const appStateRef = useRef<AppStateStatus>((AppState.currentState as AppStateStatus) || 'active');
 
   const refreshSecurityState = useCallback(async () => {
     try {

@@ -1,3 +1,4 @@
+/* eslint-disable no-bitwise */
 /**
  * Lightweight, standard pure-JS implementation of SHA-256.
  * Zero external dependencies; fully compatible with Hermes, React Native CLI, and Jest.
@@ -8,15 +9,12 @@ function rightRotate(value: number, amount: number): number {
 }
 
 export function sha256(ascii: string): string {
-  const mathPow = Math.pow;
-  const maxWord = mathPow(2, 32);
-  let lengthProperty = 'length';
   let i = 0;
   let j = 0;
   let result = '';
 
   const words: number[] = [];
-  const asciiBitLength = ascii[lengthProperty] * 8;
+  const asciiBitLength = ascii.length * 8;
 
   let hash = [
     0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
@@ -42,10 +40,8 @@ export function sha256(ascii: string): string {
     0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
   ];
 
-  let compositeClear = true;
-  for (let c = 0; c < ascii[lengthProperty]; c++) {
+  for (let c = 0; c < ascii.length; c++) {
     const code = ascii.charCodeAt(c);
-    if (code >> 8) compositeClear = false;
     words[c >> 2] |= code << ((3 - (c % 4)) * 8);
   }
 

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- UniversalDocs: Hardware-backed offline security model -->
+    <!-- Explicitly exclude vault encrypted files, database, credentials, and cache -->
+    <exclude domain="file" path="UniversalDocs/Vault" />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="root" path="." />
+</full-backup-content>

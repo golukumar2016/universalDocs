@@ -48,7 +48,7 @@ export const AppLockOverlay: React.FC = () => {
 
   // Lockout countdown timer
   useEffect(() => {
-    let timer: NodeJS.Timeout | null = null;
+    let timer: ReturnType<typeof setInterval> | null = null;
     if (isLockedOut && remainingSeconds > 0) {
       timer = setInterval(() => {
         setRemainingSeconds((prev) => {
@@ -334,7 +334,11 @@ export const AppLockOverlay: React.FC = () => {
 
 const styles = StyleSheet.create({
   overlayContainer: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     zIndex: 999999,
     justifyContent: 'space-between',
     alignItems: 'center',

@@ -100,7 +100,7 @@ describe('AppLockContext - Global Security Gate & Lifecycle Management', () => {
     expect(capturedLockContext?.isLocked).toBe(true);
 
     // Incorrect PIN
-    let verifyRes;
+    let verifyRes: any;
     await act(async () => {
       verifyRes = await capturedLockContext?.verifyPin('0000');
     });

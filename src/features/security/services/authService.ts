@@ -216,7 +216,7 @@ export class AuthService {
         available: Boolean(available),
         biometryType: available && biometryType ? biometryType : 'None',
       };
-    } catch (error) {
+    } catch {
       return { available: false, biometryType: 'None' };
     }
   }
