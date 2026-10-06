@@ -8,6 +8,9 @@ import { useAppTheme } from '../shared/hooks';
 import { incomingFileService } from '../core/intents/incomingFileService';
 import { navigate } from './navigation/navigationRef';
 
+import { AppLockProvider } from '../features/security/context/AppLockContext';
+import { AppLockOverlay } from '../features/security/components/AppLockOverlay';
+
 const AppContent: React.FC = () => {
   const { themeColors } = useAppTheme();
 
@@ -51,6 +54,7 @@ const AppContent: React.FC = () => {
     <>
       <StatusBar barStyle={themeColors.statusBar} />
       <RootNavigator />
+      <AppLockOverlay />
     </>
   );
 };
@@ -58,7 +62,9 @@ const AppContent: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <AppProvider>
-      <AppContent />
+      <AppLockProvider>
+        <AppContent />
+      </AppLockProvider>
     </AppProvider>
   );
 };

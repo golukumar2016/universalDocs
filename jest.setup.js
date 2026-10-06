@@ -24,6 +24,7 @@ const mockTables = {
   documents: new Map(),
   folders: new Map(),
   recent: new Map(),
+  vault_documents: new Map(),
 };
 
 const mockExecuteSql = jest.fn(async (sql, params = []) => {
@@ -35,7 +36,7 @@ const mockExecuteSql = jest.fn(async (sql, params = []) => {
   }
 
   // INSERT OR REPLACE INTO documents
-  if (/^INSERT/i.test(trimmed) && /documents/i.test(trimmed)) {
+  if (/^INSERT/i.test(trimmed) && /\bdocuments\b/i.test(trimmed) && !/vault_documents/i.test(trimmed)) {
     const doc = {
       id: params[0],
       name: params[1],
@@ -196,7 +197,7 @@ const mockExecuteSql = jest.fn(async (sql, params = []) => {
   }
 
   // SELECT * FROM documents (fallback / all)
-  if (/SELECT \* FROM documents/i.test(trimmed)) {
+  if (/SELECT \* FROM documents\b/i.test(trimmed) && !/vault_documents/i.test(trimmed)) {
     const rows = Array.from(mockTables.documents.values()).sort((a, b) => b.updatedAt - a.updatedAt);
     return [{ rows: { length: rows.length, item: (i) => rows[i] } }];
   }
@@ -221,6 +222,77 @@ const mockExecuteSql = jest.fn(async (sql, params = []) => {
     return [{ rows: { length: 0, item: () => null }, rowsAffected: 1 }];
   }
 
+  // INSERT OR REPLACE INTO vault_documents
+  if (/^INSERT/i.test(trimmed) && /vault_documents/i.test(trimmed)) {
+    const doc = {
+      id: params[0],
+      name: params[1],
+      encryptedPath: params[2],
+      mimeType: params[3],
+      extension: params[4],
+      originalSize: params[5],
+      encryptedSize: params[6],
+      createdAt: params[7],
+      updatedAt: params[8],
+      lastOpenedAt: params[9],
+      isFavorite: params[10],
+    };
+    mockTables.vault_documents.set(doc.id, doc);
+    return [{ rows: { length: 0, item: () => null }, rowsAffected: 1, insertId: doc.id }];
+  }
+
+  // UPDATE vault_documents SET lastOpenedAt = ? WHERE id = ?
+  if (/^UPDATE vault_documents/i.test(trimmed) && /lastOpenedAt\s*=\s*\?/i.test(trimmed)) {
+    const [time, id] = params;
+    const doc = mockTables.vault_documents.get(id);
+    if (doc) {
+      doc.lastOpenedAt = time;
+      mockTables.vault_documents.set(id, doc);
+    }
+    return [{ rows: { length: 0, item: () => null }, rowsAffected: 1 }];
+  }
+
+  // UPDATE vault_documents SET isFavorite = ?
+  if (/^UPDATE vault_documents/i.test(trimmed) && /isFavorite\s*=\s*\?/i.test(trimmed)) {
+    const [fav, updatedAt, id] = params;
+    const doc = mockTables.vault_documents.get(id);
+    if (doc) {
+      doc.isFavorite = fav;
+      doc.updatedAt = updatedAt;
+      mockTables.vault_documents.set(id, doc);
+    }
+    return [{ rows: { length: 0, item: () => null }, rowsAffected: 1 }];
+  }
+
+  // SELECT * FROM vault_documents WHERE id = ?
+  if (/SELECT \* FROM vault_documents WHERE id = \?/i.test(trimmed)) {
+    const id = params[0];
+    const doc = mockTables.vault_documents.get(id);
+    const rows = doc ? [doc] : [];
+    return [{ rows: { length: rows.length, item: (i) => rows[i] } }];
+  }
+
+  // SELECT * FROM vault_documents WHERE name LIKE ?
+  if (/SELECT \* FROM vault_documents WHERE name LIKE \?/i.test(trimmed)) {
+    const q = (params[0] || '').replace(/%/g, '').toLowerCase();
+    const rows = Array.from(mockTables.vault_documents.values())
+      .filter((d) => d.name.toLowerCase().includes(q))
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+    return [{ rows: { length: rows.length, item: (i) => rows[i] } }];
+  }
+
+  // SELECT * FROM vault_documents
+  if (/SELECT \* FROM vault_documents/i.test(trimmed)) {
+    const rows = Array.from(mockTables.vault_documents.values()).sort((a, b) => b.updatedAt - a.updatedAt);
+    return [{ rows: { length: rows.length, item: (i) => rows[i] } }];
+  }
+
+  // DELETE FROM vault_documents WHERE id = ?
+  if (/DELETE FROM vault_documents WHERE id = \?/i.test(trimmed)) {
+    mockTables.vault_documents.delete(params[0]);
+    return [{ rows: { length: 0, item: () => null }, rowsAffected: 1 }];
+  }
+
   return [{ rows: { length: 0, item: () => null }, rowsAffected: 0 }];
 });
 
@@ -236,10 +308,24 @@ jest.mock('react-native-sqlite-storage', () => ({
   openDatabase: jest.fn().mockResolvedValue(mockDbInstance),
 }));
 
+const mockKeychainStore = new Map();
 jest.mock('react-native-keychain', () => ({
-  setGenericPassword: jest.fn(),
-  getGenericPassword: jest.fn(),
-  resetGenericPassword: jest.fn(),
+  setGenericPassword: jest.fn((username, password, options) => {
+    const service = (options && options.service) || 'default';
+    mockKeychainStore.set(service, { username, password });
+    return Promise.resolve(true);
+  }),
+  getGenericPassword: jest.fn((options) => {
+    const service = (options && options.service) || 'default';
+    const found = mockKeychainStore.get(service);
+    return Promise.resolve(found || false);
+  }),
+  resetGenericPassword: jest.fn((options) => {
+    const service = (options && options.service) || 'default';
+    mockKeychainStore.delete(service);
+    return Promise.resolve(true);
+  }),
+  _mockStore: mockKeychainStore,
 }));
 
 jest.mock('react-native-biometrics', () => {
@@ -253,6 +339,29 @@ const { NativeModules } = require('react-native');
 NativeModules.AndroidNavigationBarModule = {
   setNavigationBarTheme: jest.fn().mockResolvedValue(true),
   setSystemBarsTheme: jest.fn().mockResolvedValue(true),
+};
+
+NativeModules.VaultEncryptionModule = {
+  encryptFile: jest.fn().mockImplementation((sourceUriOrPath, destFileName) => {
+    return Promise.resolve({
+      encryptedPath: `/mock/files/UniversalDocs/Vault/${destFileName}.enc`,
+      encryptedUri: `file:///mock/files/UniversalDocs/Vault/${destFileName}.enc`,
+      fileName: `${destFileName}.enc`,
+      encryptedSize: 1024,
+    });
+  }),
+  decryptFile: jest.fn().mockImplementation((encryptedPath, outputFileName) => {
+    return Promise.resolve({
+      decryptedPath: `/mock/cache/vault_decrypted/temp_${outputFileName}`,
+      decryptedUri: `file:///mock/cache/vault_decrypted/temp_${outputFileName}`,
+      fileName: `temp_${outputFileName}`,
+      decryptedSize: 900,
+    });
+  }),
+  cleanDecryptedFiles: jest.fn().mockResolvedValue(2),
+  cleanDecryptedFile: jest.fn().mockResolvedValue(true),
+  deleteVaultFile: jest.fn().mockResolvedValue(true),
+  setSecureFlag: jest.fn().mockResolvedValue(true),
 };
 
 NativeModules.IncomingFileModule = {

@@ -14,7 +14,8 @@ class IncomingFilePackage : ReactPackage {
             AndroidNavigationBarModule(reactContext),
             PdfRendererModule(reactContext),
             DocumentScannerModule(reactContext),
-            PdfAnnotationModule(reactContext)
+            PdfAnnotationModule(reactContext),
+            VaultEncryptionModule(reactContext)
         )
     }
 

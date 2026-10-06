@@ -4,6 +4,7 @@ import {
   CREATE_DOCUMENTS_TABLE,
   CREATE_FOLDERS_TABLE,
   CREATE_RECENT_TABLE,
+  CREATE_VAULT_DOCUMENTS_TABLE,
   CREATE_INDEXES,
 } from './schema';
 
@@ -36,6 +37,7 @@ export class AppDatabase {
       await db.executeSql(CREATE_FOLDERS_TABLE);
       await db.executeSql(CREATE_DOCUMENTS_TABLE);
       await db.executeSql(CREATE_RECENT_TABLE);
+      await db.executeSql(CREATE_VAULT_DOCUMENTS_TABLE);
 
       for (const indexSql of CREATE_INDEXES) {
         await db.executeSql(indexSql);
