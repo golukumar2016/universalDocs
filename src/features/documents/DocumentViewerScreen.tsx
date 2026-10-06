@@ -12,6 +12,7 @@ import { RootStackParamList } from '../../app/navigation/navigation.types';
 import { incomingFileService } from '../../core/intents/incomingFileService';
 import { formatFileSize } from '../../shared/utils';
 import { useAppTheme } from '../../shared/hooks';
+import { PdfViewer } from './pdf';
 
 type DocumentViewerRouteProp = RouteProp<RootStackParamList, 'DocumentViewer'>;
 
@@ -24,11 +25,25 @@ export const DocumentViewerScreen: React.FC = () => {
 
   const handleBackToHome = () => {
     incomingFileService.clearCurrentDocument();
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'InitialDocument' }],
-    });
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'InitialDocument' }],
+      });
+    }
   };
+
+  const isPdf = (document?.extension || '').toLowerCase() === 'pdf';
+
+  if (isPdf && document?.uri) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
+        <PdfViewer document={document} onBack={handleBackToHome} />
+      </SafeAreaView>
+    );
+  }
 
   const getFormatIcon = (ext?: string) => {
     switch ((ext || '').toLowerCase()) {

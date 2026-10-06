@@ -9,6 +9,7 @@ import {
   FolderScreen,
 } from '../../features/documents';
 import { EditorScreen } from '../../features/editor';
+import { ScannerScreen } from '../../features/scanner';
 import { MainNavigator } from './MainNavigator';
 import { useAppTheme } from '../../shared/hooks';
 
@@ -56,6 +57,11 @@ export const RootNavigator: React.FC = () => {
       <Stack.Screen
         name="Editor"
         component={EditorScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Scanner"
+        component={ScannerScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen name="MainTabs" component={MainNavigator} />

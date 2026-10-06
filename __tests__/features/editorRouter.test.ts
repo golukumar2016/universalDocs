@@ -16,7 +16,7 @@ describe('EditorRouter', () => {
     const route = EditorRouter.resolveRoute(doc);
     expect(route.type).toBe('txt');
     expect(route.screen).toBe('Editor');
-    expect(route.params.documentId).toBe('doc_1');
+    expect((route.params as any).documentId).toBe('doc_1');
   });
 
   it('routes .md markdown files to TXT Editor', () => {

@@ -132,7 +132,7 @@ describe('DocumentRepository & Database Layer', () => {
     // Add A first, then B after a delay
     await RecentRepository.addRecent(docA.id);
     // Simulate slight time delay
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(() => resolve(undefined), 10));
     await RecentRepository.addRecent(docB.id);
 
     const recents = await RecentRepository.getRecentDocuments(5);

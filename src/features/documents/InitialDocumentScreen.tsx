@@ -476,7 +476,7 @@ export const InitialDocumentScreen: React.FC = () => {
                 borderColor: themeColors.border,
               },
             ]}
-            onPress={() => navigation.navigate('MainTabs', { screen: 'ScannerTab' })}
+            onPress={() => (navigation as any).navigate('Scanner')}
             activeOpacity={0.7}
           >
             <View style={[styles.actionIconContainer, { backgroundColor: isDark ? '#451A03' : '#FEF3C7' }]}>

@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
-import { StatusBar } from 'react-native';
+import { StatusBar, LogBox } from 'react-native';
+
+LogBox.ignoreAllLogs(true);
 import { AppProvider } from './providers/AppProvider';
 import { RootNavigator } from './navigation/RootNavigator';
 import { useAppTheme } from '../shared/hooks';

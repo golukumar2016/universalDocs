@@ -11,7 +11,10 @@ class IncomingFilePackage : ReactPackage {
     override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
         return listOf(
             IncomingFileModule(reactContext),
-            AndroidNavigationBarModule(reactContext)
+            AndroidNavigationBarModule(reactContext),
+            PdfRendererModule(reactContext),
+            DocumentScannerModule(reactContext),
+            PdfAnnotationModule(reactContext)
         )
     }
 

@@ -243,7 +243,7 @@ export class EditorRouter {
     } else if ('document' in input && input.document) {
       doc = input.document;
     } else {
-      doc = input;
+      doc = input as Document | DocumentItem;
     }
 
     // Upsert into local database

@@ -275,3 +275,110 @@ NativeModules.IncomingFileModule = {
   removeListeners: jest.fn(),
 };
 
+NativeModules.PdfRendererModule = {
+  openPdf: jest.fn().mockResolvedValue({
+    docId: 'mock_doc_id',
+    pageCount: 3,
+    pages: [
+      { pageIndex: 0, width: 595, height: 842, aspectRatio: 595 / 842 },
+      { pageIndex: 1, width: 595, height: 842, aspectRatio: 595 / 842 },
+      { pageIndex: 2, width: 595, height: 842, aspectRatio: 595 / 842 },
+    ],
+  }),
+  renderPage: jest.fn().mockImplementation((docId, pageIndex) => {
+    return Promise.resolve({
+      pageIndex,
+      imagePath: `/mock/cache/${docId}/page_${pageIndex}.png`,
+      width: 595,
+      height: 842,
+    });
+  }),
+  closePdf: jest.fn().mockResolvedValue(true),
+  clearAllPdfCache: jest.fn().mockResolvedValue(true),
+};
+
+NativeModules.DocumentScannerModule = {
+  detectDocumentEdges: jest.fn().mockImplementation((imageUri) => {
+    return Promise.resolve({
+      width: 1200,
+      height: 1600,
+      filePath: imageUri,
+      corners: {
+        topLeft: { x: 72, y: 96 },
+        topRight: { x: 1128, y: 96 },
+        bottomRight: { x: 1128, y: 1504 },
+        bottomLeft: { x: 72, y: 1504 },
+      },
+    });
+  }),
+  cropAndPerspectiveTransform: jest.fn().mockImplementation((imageUri, corners) => {
+    return Promise.resolve({
+      imagePath: '/mock/cache/scanner_temp/cropped_123.jpg',
+      width: 1056,
+      height: 1408,
+    });
+  }),
+  enhanceImage: jest.fn().mockImplementation((imageUri, mode) => {
+    return Promise.resolve(`/mock/cache/scanner_temp/enhanced_${mode}_123.jpg`);
+  }),
+  rotateImage: jest.fn().mockImplementation((imageUri, degrees) => {
+    return Promise.resolve(`/mock/cache/scanner_temp/rotated_123.jpg`);
+  }),
+  generatePdfFromImages: jest.fn().mockImplementation((imagePaths, fileName) => {
+    return Promise.resolve({
+      path: `/mock/storage/UniversalDocs/${fileName || 'Scanned_Doc.pdf'}`,
+      uri: `file:///mock/storage/UniversalDocs/${fileName || 'Scanned_Doc.pdf'}`,
+      fileName: fileName || 'Scanned_Doc.pdf',
+      pageCount: imagePaths.length,
+      size: 1024 * 1024 * 1.5,
+    });
+  }),
+  cleanupTemporaryImages: jest.fn().mockResolvedValue(true),
+};
+
+jest.mock('react-native-vision-camera', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const mockPhotoOutput = {
+    capturePhoto: jest.fn().mockResolvedValue({
+      width: 1200,
+      height: 1600,
+      saveToTemporaryFileAsync: jest.fn().mockResolvedValue('/mock/camera/photo_123.jpg'),
+      dispose: jest.fn(),
+    }),
+  };
+  return {
+    Camera: React.forwardRef((props, ref) => {
+      React.useImperativeHandle(ref, () => ({
+        takePhoto: jest.fn().mockResolvedValue({
+          path: '/mock/camera/photo_123.jpg',
+          width: 1200,
+          height: 1600,
+        }),
+      }));
+      return React.createElement(View, props);
+    }),
+    useCameraDevice: jest.fn().mockReturnValue({ id: 'back_camera', position: 'back' }),
+    usePhotoOutput: jest.fn().mockReturnValue(mockPhotoOutput),
+    useCameraPermission: jest.fn().mockReturnValue({ hasPermission: true, requestPermission: jest.fn() }),
+  };
+});
+
+NativeModules.PdfAnnotationModule = {
+  generateAnnotatedPdf: jest.fn().mockImplementation((originalPath, annotationsJson, newFileName) => {
+    const finalName = newFileName || 'Document_annotated.pdf';
+    return Promise.resolve({
+      filePath: `/mock/storage/UniversalDocs/${finalName}`,
+      uri: `file:///mock/storage/UniversalDocs/${finalName}`,
+      fileName: finalName,
+      pageCount: 3,
+      size: 1024 * 500,
+      annotationsSidecar: `/mock/storage/UniversalDocs/.annotations/mock_annot.json`,
+    });
+  }),
+  saveAnnotationMetadata: jest.fn().mockResolvedValue(true),
+  loadAnnotationMetadata: jest.fn().mockResolvedValue('[]'),
+};
+
+
+

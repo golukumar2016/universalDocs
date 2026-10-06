@@ -15,5 +15,6 @@ export type RootStackParamList = {
   DocumentViewer: { document: Document };
   UnsupportedDocument: { document?: Document; reason?: string };
   Editor: { documentId?: string; filePath?: string; title?: string; document?: Document };
+  Scanner: undefined;
   MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
 };

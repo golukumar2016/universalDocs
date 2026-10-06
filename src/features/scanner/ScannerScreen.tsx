@@ -1,256 +1,325 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
   Alert,
-  ActivityIndicator,
+  BackHandler,
+  SafeAreaView,
 } from 'react-native';
-import { PermissionService } from '../../core/permissions/permissionService';
+import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../shared/hooks';
+import { DocumentItem } from '../../shared/types';
+import { EditorRouter } from '../editor/services/editorRouter';
+import {
+  ScannerStep,
+  ScanPage,
+  ScannerSession,
+  ScanDocumentCorners,
+  CropTransformResult,
+  EnhancementMode,
+} from './types/scanner.types';
+import { ScannerService } from './services/scannerService';
+import { ScannerCamera } from './components/ScannerCamera';
+import { CropEditor } from './components/CropEditor';
+import { EnhancementSelector } from './components/EnhancementSelector';
+import { ScanReview } from './components/ScanReview';
+import { SavePdfModal } from './components/SavePdfModal';
 
 export const ScannerScreen: React.FC = () => {
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-  const [isChecking, setIsChecking] = useState<boolean>(true);
-  const { themeColors, isDark } = useAppTheme();
+  const navigation = useNavigation<any>();
+  const { themeColors } = useAppTheme();
 
+  const [step, setStep] = useState<ScannerStep>('CAMERA_CAPTURE');
+  const [session, setSession] = useState<ScannerSession>(() =>
+    ScannerService.createSession()
+  );
+
+  // Active page being cropped / enhanced
+  const [activePhoto, setActivePhoto] = useState<{
+    uri: string;
+    width: number;
+    height: number;
+    initialCorners?: ScanDocumentCorners;
+  } | null>(null);
+
+  const [activeCropResult, setActiveCropResult] = useState<CropTransformResult | null>(null);
+  const [activeCorners, setActiveCorners] = useState<ScanDocumentCorners | null>(null);
+
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState<boolean>(false);
+
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+
+  const stepRef = useRef(step);
+  stepRef.current = step;
+
+  // Cleanup on unmount
   useEffect(() => {
-    checkPermission();
+    return () => {
+      ScannerService.cleanupTemporaryImages().catch(() => {});
+    };
   }, []);
 
-  const checkPermission = async () => {
+  // Hardware Back Handler
+  useEffect(() => {
+    const handleBack = () => {
+      const currentStep = stepRef.current;
+      const currentSession = sessionRef.current;
+
+      if (isSaveModalOpen) {
+        setIsSaveModalOpen(false);
+        return true;
+      }
+
+      if (currentStep === 'ENHANCE') {
+        setStep('CROP');
+        return true;
+      }
+
+      if (currentStep === 'CROP') {
+        if (currentSession.pages.length > 0) {
+          setStep('REVIEW');
+        } else {
+          setStep('CAMERA_CAPTURE');
+        }
+        return true;
+      }
+
+      if (currentStep === 'CAMERA_CAPTURE' && currentSession.pages.length > 0) {
+        setStep('REVIEW');
+        return true;
+      }
+
+      if (currentSession.pages.length > 0) {
+        Alert.alert(
+          'Discard Scanned Document?',
+          `You have ${currentSession.pages.length} scanned ${
+            currentSession.pages.length === 1 ? 'page' : 'pages'
+          }. Discarding will delete this scan session.`,
+          [
+            { text: 'Keep Scanning', style: 'cancel' },
+            {
+              text: 'Discard',
+              style: 'destructive',
+              onPress: () => {
+                ScannerService.cleanupTemporaryImages().catch(() => {});
+                setSession(ScannerService.createSession());
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                } else {
+                  navigation.navigate('MainTabs');
+                }
+              },
+            },
+          ]
+        );
+        return true;
+      }
+
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+        return true;
+      }
+
+      return false;
+    };
+
+    const sub = BackHandler.addEventListener('hardwareBackPress', handleBack);
+    return () => sub.remove();
+  }, [navigation, isSaveModalOpen]);
+
+  // Step 1: Photo Captured from Camera or Imported
+  const handlePhotoCaptured = async (
+    imagePath: string,
+    width: number,
+    height: number
+  ) => {
     try {
-      setIsChecking(true);
-      const granted = await PermissionService.checkCameraPermission();
-      setHasCameraPermission(granted);
-    } catch (error) {
-      console.error('Camera permission check error:', error);
-      setHasCameraPermission(false);
-    } finally {
-      setIsChecking(false);
+      // Run automatic edge detection for initial corner placement
+      let initialCorners: ScanDocumentCorners | undefined;
+      try {
+        const edgeResult = await ScannerService.detectDocumentEdges(imagePath);
+        if (edgeResult && edgeResult.corners) {
+          initialCorners = edgeResult.corners;
+          if (edgeResult.width > 0 && edgeResult.height > 0) {
+            width = edgeResult.width;
+            height = edgeResult.height;
+          }
+        }
+      } catch {
+        // Fallback to default margins
+      }
+
+      setActivePhoto({
+        uri: imagePath,
+        width,
+        height,
+        initialCorners,
+      });
+      setStep('CROP');
+    } catch (err: any) {
+      Alert.alert('Image Error', err?.message || 'Could not load captured image.');
     }
   };
 
-  const handleRequestPermission = async () => {
-    try {
-      const granted = await PermissionService.requestCameraPermission();
-      setHasCameraPermission(granted);
-      if (!granted) {
-        Alert.alert(
-          'Permission Denied',
-          'Camera access is required to scan physical documents into PDF format.'
-        );
+  // Step 2: Confirm 4-Corner Perspective Crop
+  const handleConfirmCrop = (
+    result: CropTransformResult,
+    corners: ScanDocumentCorners
+  ) => {
+    setActiveCropResult(result);
+    setActiveCorners(corners);
+    setStep('ENHANCE');
+  };
+
+  // Step 3: Confirm Enhancement & Add Page to Session
+  const handleConfirmPage = (
+    enhancedImagePath: string,
+    mode: EnhancementMode
+  ) => {
+    if (!activePhoto || !activeCropResult) return;
+
+    const newPage: ScanPage = {
+      id: `page_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      originalImagePath: activePhoto.uri,
+      croppedImagePath: activeCropResult.imagePath,
+      enhancedImagePath,
+      corners: activeCorners || {
+        topLeft: { x: 0, y: 0 },
+        topRight: { x: activePhoto.width, y: 0 },
+        bottomRight: { x: activePhoto.width, y: activePhoto.height },
+        bottomLeft: { x: 0, y: activePhoto.height },
+      },
+      enhancementMode: mode,
+      rotation: 0,
+      width: activeCropResult.width,
+      height: activeCropResult.height,
+      timestamp: Date.now(),
+    };
+
+    setSession(prev => ScannerService.addPage(prev, newPage));
+    setActivePhoto(null);
+    setActiveCropResult(null);
+    setActiveCorners(null);
+    setStep('REVIEW');
+  };
+
+  // Re-crop existing page
+  const handleEditPage = (page: ScanPage) => {
+    setActivePhoto({
+      uri: page.originalImagePath,
+      width: page.width,
+      height: page.height,
+      initialCorners: page.corners,
+    });
+    setStep('CROP');
+  };
+
+  // Delete page
+  const handleDeletePage = (pageId: string) => {
+    setSession(prev => {
+      const next = ScannerService.removePage(prev, pageId);
+      if (next.pages.length === 0) {
+        setStep('CAMERA_CAPTURE');
       }
-    } catch (error: any) {
-      Alert.alert('Permission Error', error?.message || 'Could not request camera permission.');
-    }
+      return next;
+    });
+  };
+
+  // Move page up/down
+  const handleMovePage = (pageId: string, direction: 'UP' | 'DOWN') => {
+    setSession(prev => ScannerService.movePage(prev, pageId, direction));
+  };
+
+  // Discard all pages
+  const handleDiscardScan = () => {
+    ScannerService.cleanupTemporaryImages().catch(() => {});
+    setSession(ScannerService.createSession());
+    setStep('CAMERA_CAPTURE');
+  };
+
+  // PDF Saved & Generated Callback
+  const handlePdfSaved = async (document: DocumentItem) => {
+    setIsSaveModalOpen(false);
+    // Reset scanner session state
+    setSession(ScannerService.createSession());
+    setStep('CAMERA_CAPTURE');
+
+    // Open through UniversalDocs EditorRouter into existing PDF Viewer Engine!
+    await EditorRouter.openDocument(navigation, document);
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
-      <View style={styles.container}>
-        <Text style={[styles.title, { color: themeColors.textPrimary }]}>Document Scanner</Text>
-        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-          Scan physical paper documents into high-clarity offline PDF files.
-        </Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
+      {step === 'CAMERA_CAPTURE' && (
+        <ScannerCamera
+          pageCount={session.pages.length}
+          onPhotoCaptured={handlePhotoCaptured}
+          onGoToReview={() => setStep('REVIEW')}
+          onClose={() => {
+            if (session.pages.length > 0) {
+              setStep('REVIEW');
+            } else if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('MainTabs');
+            }
+          }}
+        />
+      )}
 
-        {/* Scanner Pipeline Overview Card */}
-        <View
-          style={[
-            styles.pipelineCard,
-            {
-              backgroundColor: themeColors.card,
-              borderColor: themeColors.border,
-            },
-          ]}
-        >
-          <Text style={[styles.pipelineTitle, { color: themeColors.textPrimary }]}>
-            Offline Scanning Workflow
-          </Text>
-          <View style={styles.stepRow}>
-            <View style={[styles.stepCircle, { backgroundColor: themeColors.badgeBg }]}>
-              <Text style={[styles.stepNum, { color: themeColors.primary }]}>1</Text>
-            </View>
-            <Text style={[styles.stepText, { color: themeColors.textPrimary }]}>
-              Camera Capture
-            </Text>
-          </View>
-          <View style={[styles.stepLine, { backgroundColor: themeColors.border }]} />
-          <View style={styles.stepRow}>
-            <View style={[styles.stepCircle, { backgroundColor: themeColors.badgeBg }]}>
-              <Text style={[styles.stepNum, { color: themeColors.primary }]}>2</Text>
-            </View>
-            <Text style={[styles.stepText, { color: themeColors.textPrimary }]}>
-              Edge Detection & Crop
-            </Text>
-          </View>
-          <View style={[styles.stepLine, { backgroundColor: themeColors.border }]} />
-          <View style={styles.stepRow}>
-            <View style={[styles.stepCircle, { backgroundColor: themeColors.badgeBg }]}>
-              <Text style={[styles.stepNum, { color: themeColors.primary }]}>3</Text>
-            </View>
-            <Text style={[styles.stepText, { color: themeColors.textPrimary }]}>
-              Color & Contrast Filter
-            </Text>
-          </View>
-          <View style={[styles.stepLine, { backgroundColor: themeColors.border }]} />
-          <View style={styles.stepRow}>
-            <View style={[styles.stepCircle, { backgroundColor: themeColors.badgeBg }]}>
-              <Text style={[styles.stepNum, { color: themeColors.primary }]}>4</Text>
-            </View>
-            <Text style={[styles.stepText, { color: themeColors.textPrimary }]}>
-              Export to Local PDF & Save
-            </Text>
-          </View>
-        </View>
+      {step === 'CROP' && activePhoto && (
+        <CropEditor
+          imageUri={activePhoto.uri}
+          originalWidth={activePhoto.width}
+          originalHeight={activePhoto.height}
+          initialCorners={activePhoto.initialCorners}
+          onRetake={() => {
+            setActivePhoto(null);
+            if (session.pages.length > 0) {
+              setStep('REVIEW');
+            } else {
+              setStep('CAMERA_CAPTURE');
+            }
+          }}
+          onConfirmCrop={handleConfirmCrop}
+        />
+      )}
 
-        {/* Camera Permission State */}
-        <View
-          style={[
-            styles.statusBox,
-            {
-              backgroundColor: themeColors.card,
-              borderColor: themeColors.border,
-            },
-          ]}
-        >
-          {isChecking ? (
-            <ActivityIndicator size="small" color={themeColors.primary} />
-          ) : hasCameraPermission ? (
-            <View style={styles.permissionReady}>
-              <Text style={styles.readyBadge}>✓ Camera Ready</Text>
-              <TouchableOpacity
-                style={[styles.scanBtn, { backgroundColor: themeColors.primary }]}
-                onPress={() => Alert.alert('Camera', 'Scanner viewfinder initialized.')}
-              >
-                <Text style={styles.scanBtnText}>📸 Start Scan Session</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.permissionNeed}>
-              <Text style={[styles.needText, { color: themeColors.textSecondary }]}>
-                Camera permission is required to use the document scanner.
-              </Text>
-              <TouchableOpacity
-                style={[styles.permissionBtn, { backgroundColor: themeColors.primary }]}
-                onPress={handleRequestPermission}
-              >
-                <Text style={styles.permissionBtnText}>Grant Camera Permission</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </View>
+      {step === 'ENHANCE' && activeCropResult && (
+        <EnhancementSelector
+          croppedImagePath={activeCropResult.imagePath}
+          onBackToCrop={() => setStep('CROP')}
+          onConfirmPage={handleConfirmPage}
+        />
+      )}
+
+      {step === 'REVIEW' && (
+        <ScanReview
+          pages={session.pages}
+          onAddPage={() => setStep('CAMERA_CAPTURE')}
+          onDeletePage={handleDeletePage}
+          onMovePage={handleMovePage}
+          onEditPage={handleEditPage}
+          onGeneratePdf={() => setIsSaveModalOpen(true)}
+          onDiscardScan={handleDiscardScan}
+        />
+      )}
+
+      {/* Save PDF Modal */}
+      <SavePdfModal
+        visible={isSaveModalOpen}
+        pages={session.pages}
+        onClose={() => setIsSaveModalOpen(false)}
+        onSuccess={handlePdfSaved}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   container: {
     flex: 1,
-    padding: 16,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  subtitle: {
-    fontSize: 13,
-    marginTop: 4,
-    marginBottom: 20,
-    lineHeight: 18,
-  },
-  pipelineCard: {
-    borderRadius: 12,
-    padding: 18,
-    borderWidth: 1,
-    marginBottom: 24,
-  },
-  pipelineTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 16,
-  },
-  stepRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  stepCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  stepNum: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  stepText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  stepLine: {
-    width: 2,
-    height: 16,
-    marginLeft: 13,
-    marginVertical: 2,
-  },
-  statusBox: {
-    borderRadius: 12,
-    padding: 18,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  permissionReady: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  readyBadge: {
-    color: '#15803D',
-    fontWeight: '600',
-    fontSize: 14,
-    marginBottom: 12,
-  },
-  scanBtn: {
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 10,
-    width: '100%',
-    alignItems: 'center',
-  },
-  scanBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  permissionNeed: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  needText: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 14,
-    lineHeight: 20,
-  },
-  permissionBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    width: '100%',
-    alignItems: 'center',
-  },
-  permissionBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
   },
 });
 

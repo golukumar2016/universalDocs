@@ -6,6 +6,7 @@ import { DocumentsScreen } from '../../features/documents';
 import { SearchScreen } from '../../features/search';
 import { ScannerScreen } from '../../features/scanner';
 import { SecurityScreen } from '../../features/security';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '../../shared/hooks';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -79,6 +80,7 @@ const SecurityTabIcon: React.FC<{ color: string; focused: boolean }> = ({ color,
 
 export const MainNavigator: React.FC = () => {
   const { themeColors, isDark } = useAppTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
@@ -100,8 +102,8 @@ export const MainNavigator: React.FC = () => {
           backgroundColor: themeColors.surface,
           borderTopColor: themeColors.border,
           borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 88 : 64,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+          height: Platform.OS === 'ios' ? 88 : 60 + insets.bottom,
+          paddingBottom: Platform.OS === 'ios' ? 28 : Math.max(insets.bottom, 6),
           paddingTop: 8,
           elevation: 8,
           shadowColor: '#000',
@@ -157,7 +159,20 @@ export const MainNavigator: React.FC = () => {
       <Tab.Screen
         name="ScannerTab"
         component={ScannerScreen}
+        listeners={({ navigation }) => ({
+          tabPress: e => {
+            e.preventDefault();
+            const parent = navigation.getParent();
+            if (parent) {
+              (parent as any).navigate('Scanner');
+            } else {
+              (navigation as any).navigate('Scanner');
+            }
+          },
+        })}
         options={{
+          headerShown: false,
+          tabBarStyle: { display: 'none' },
           title: 'Scanner',
           tabBarLabel: 'Scanner',
           tabBarIcon: ({ color, focused }) => (

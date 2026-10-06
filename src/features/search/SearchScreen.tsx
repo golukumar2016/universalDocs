@@ -14,6 +14,7 @@ import { DocumentRepository } from '../../core/database/repositories/documentRep
 import { DocumentItem } from '../../shared/types';
 import { formatFileSize, formatDate } from '../../shared/utils';
 import { useAppTheme } from '../../shared/hooks';
+import { EditorRouter } from '../editor/services/editorRouter';
 
 export const SearchScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -46,11 +47,7 @@ export const SearchScreen: React.FC = () => {
   }, [handleSearch]);
 
   const handleOpenDoc = (doc: DocumentItem) => {
-    navigation.navigate('Editor', {
-      documentId: doc.id,
-      filePath: doc.path,
-      title: doc.name,
-    });
+    EditorRouter.openDocument(navigation, doc);
   };
 
   const renderItem = ({ item }: { item: DocumentItem }) => {

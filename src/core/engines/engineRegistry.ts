@@ -1,5 +1,6 @@
 import { DocumentEngine } from './types';
 import { textDocumentEngine } from './txtEngine';
+import { pdfDocumentEngine } from './pdfEngine';
 
 export class EngineRegistry {
   private static instance: EngineRegistry;
@@ -8,6 +9,7 @@ export class EngineRegistry {
   private constructor() {
     // Register built-in default engines
     this.registerEngine(textDocumentEngine);
+    this.registerEngine(pdfDocumentEngine);
   }
 
   static getInstance(): EngineRegistry {
